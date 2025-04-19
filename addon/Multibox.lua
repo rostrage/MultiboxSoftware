@@ -2,19 +2,18 @@ SLASH_HELLO1 = "/hw"
 local frame = CreateFrame("Frame", nil, UIParent) -- Creates a parent frame anchored to the main UI
 local gsub = gsub;
 -- Positioning settings:
-frame:SetPoint("TOPLEFT", 63, -126)         -- Centers horizontally and vertically
-frame:SetSize(1000, 1000)          -- Makes it 100x100 pixels in size
+frame:SetPoint("TOPLEFT", 0, 0)         -- Centers horizontally and vertically
+frame:SetSize(125, 125)          -- Makes it 100x100 pixels in size
 
 -- Create texture object and set properties:
 local texture = frame:CreateTexture() 
 -- message("3")
-texture:SetPoint("TOPLEFT")
+texture:SetPoint("TOPLEFT",93, -248)
 texture:SetSize(1, 1)
-texture:SetTexture("Interface\\AddOns\\Pixels\\Smooth.tga")
+texture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
 
 local function drawPixel(r,g,b)
-    texture:SetVertexColor(r, g, b) -- Set solid red color (R=1, G=0, B=0)
-    -- Optional: Ensure it appears on top of other elements
+    texture:SetVertexColor(r, g, b)
     frame:SetFrameStrata("HIGH")
 end
 
@@ -67,7 +66,7 @@ end
 
 
 SlashCmdList["HELLO"] = test
--- local i = 0;
+local i = 0;
 local frame = CreateFrame("FRAME")
 local timeElapsed = 0
 MacroButton=CreateFrame("Button","MyMacroButton",nil,"SecureActionButtonTemplate");
@@ -76,14 +75,16 @@ MacroButton:SetAttribute("type","macro");-- Set type to "macro"
 -- SetBindingClick("R", "MyMacroButton")
 frame:HookScript("OnUpdate", function(self, elapsed)
 	timeElapsed = timeElapsed + elapsed
-	if (timeElapsed > .1) then
+	if (timeElapsed > .5) then
 		timeElapsed = 0
-        local nextMacro = getRestoShamanMacro();
-        DEFAULT_CHAT_FRAME:AddMessage(nextMacro);
+        i = (i +1) % 255;
+        local r = i /255;
+        -- local nextMacro = getRestoShamanMacro();
+        -- DEFAULT_CHAT_FRAME:AddMessage(nextMacro);
 
-        -- DEFAULT_CHAT_FRAME:AddMessage("foo");
+        DEFAULT_CHAT_FRAME:AddMessage(i);
         MacroButton:SetAttribute("macrotext",nextMacro);
-        -- drawPixel(i/255,0,0)
+        drawPixel(r,0,0)
 		-- do something
 	end
 end)
