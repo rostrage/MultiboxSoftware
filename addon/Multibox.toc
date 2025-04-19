@@ -1,0 +1,7 @@
+## Interface: 30300
+## Title: Multibox
+## Version: v80000-1.0.0
+## Author: Test
+## Notes: Nothing
+
+Multibox.lua
