@@ -20,6 +20,7 @@ use windows::{
         },
     },
 };
+use iced::widget::{button, column, text, Column};
 
 // Define a wrapper type for HWND to make it hashable
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,16 +71,54 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
     windows::core::BOOL::from(true)
 }
 
+#[derive(Default)]
+struct Counter {
+    value: i32,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum Message {
+    Increment,
+    Decrement,
+}
+impl Counter {
+    pub fn view(&self) -> Column<Message> {
+        // We use a column: a simple vertical layout
+        column![
+            // The increment button. We tell it to produce an
+            // `Increment` message when pressed
+            button("+").on_press(Message::Increment),
+
+            // We show the value of the counter here
+            text(self.value).size(50),
+
+            // The decrement button. We tell it to produce a
+            // `Decrement` message when pressed
+            button("-").on_press(Message::Decrement),
+        ]
+    }
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::Increment => {
+                self.value += 1;
+            }
+            Message::Decrement => {
+                self.value -= 1;
+            }
+        }
+    }
+}
+
 fn main() {
+    iced::run("A cool counter", Counter::update, Counter::view);
     unsafe {
         // Initialize scancode mapping
         let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
-        scancode_map.insert(0x00, VK_F1);  // Red = 0 → 'F1' key
-        scancode_map.insert(0x01, VK_F2);  // Red = 255 → 'F2' key
-        scancode_map.insert(0x02, VK_F3);  // Red = 255 → 'F2' key
-        scancode_map.insert(0x03, VK_F4);  // Red = 255 → 'F2' key
-        scancode_map.insert(0x04, VK_F5);  // Red = 255 → 'F2' key
-        scancode_map.insert(0x05, VK_F6);  // Red = 255 → 'F2' key
+        scancode_map.insert(0x01, VK_F1);
+        scancode_map.insert(0x02, VK_F2);
+        scancode_map.insert(0x03, VK_F3);
+        scancode_map.insert(0x04, VK_F4);
+        scancode_map.insert(0x05, VK_F5);
+        scancode_map.insert(0x06, VK_F6);
 
         let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
 
@@ -271,4 +310,3 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
-
