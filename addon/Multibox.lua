@@ -1,90 +1,77 @@
-SLASH_HELLO1 = "/hw"
-local frame = CreateFrame("Frame", nil, UIParent) -- Creates a parent frame anchored to the main UI
-local gsub = gsub;
--- Positioning settings:
-frame:SetPoint("TOPLEFT", 0, 0)         -- Centers horizontally and vertically
-frame:SetSize(125, 125)          -- Makes it 100x100 pixels in size
+SLASH_MBOX1 = '/mbox';
+-- Frame for drawing
+local frame = CreateFrame("Frame", nil, UIParent)
+frame:SetPoint("TOPLEFT", 0, 0)
+frame:SetSize(1, 1)
 
--- Create texture object and set properties:
-local texture = frame:CreateTexture() 
--- message("3")
-texture:SetPoint("TOPLEFT",93, -248)
-texture:SetSize(1, 1)
+-- Texture to draw pixel color
+local texture = frame:CreateTexture()
+texture:SetPoint("TOPLEFT", 0, 0)
+texture:SetSize(100, 100)
 texture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
 
-local function drawPixel(r,g,b)
+-- Draws a single pixel with given RGB values (0-1 range)
+local function drawPixel(r, g, b)
     texture:SetVertexColor(r, g, b)
     frame:SetFrameStrata("HIGH")
 end
 
-local function test(name)
-    -- for i=0,255 do
-    --     drawPixel(i/255,0,0,0,i-1)
-    -- end
-end
-
-local function getRestoShamanMacro()
-    if not UnitBuff("player", "Water Shield") then
-        return "/cast Water Shield"
-    end
-    if not GetWeaponEnchantInfo() then
-        return "/cast Earthliving Weapon"
-    end
-    if GetUnitName("focus") and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") then
-        return "/cast [target=focus] Earth Shield"
-    end
-    local macrotemplate = "/cast [@raidNUMBER] Lesser Healing Wave"
-    local targetPercent = 1.0
-    local numtargets = 0
-    local target = 0
-    for i = 1, GetNumRaidMembers() do
-        u=GetUnitName("raid"..i);
-        local healthPercent = UnitHealth(u)/UnitHealthMax(u);
-        if healthPercent < 1.0 then
-            if UnitIsPlayer(u) and UnitInRange(u)  then
-                numtargets = numtargets + 1;
-                if healthPercent < targetPercent then
-                    targetPercent = healthPercent;
-                    target = i;
-                end;
-            end
-        end
-    end;
-    if numtargets > 1 then
-        return gsub("/cast [@raidNUMBER] Chain Heal", "NUMBER", target);
-    elseif numtargets > 0 then
-        local start, duration, enabled, modRate = GetSpellCooldown("Riptide")
-        if start > 0 and duration > 0 then
-            return gsub("/cast [@raidNUMBER] Lesser Healing Wave", "NUMBER", target);
-        else
-            return gsub("/cast [@raidNUMBER] Riptide", "NUMBER", target);
-        end
-    else
-        return "/run print(\"Doing nothing\")";
-    end;
-end
-
-
-SlashCmdList["HELLO"] = test
-local i = 0;
-local frame = CreateFrame("FRAME")
+-- OnUpdate loop to draw the key value as a pixel color
 local timeElapsed = 0
-MacroButton=CreateFrame("Button","MyMacroButton",nil,"SecureActionButtonTemplate");
-MacroButton:RegisterForClicks("AnyUp");--   Respond to all buttons
-MacroButton:SetAttribute("type","macro");-- Set type to "macro"
--- SetBindingClick("R", "MyMacroButton")
 frame:HookScript("OnUpdate", function(self, elapsed)
-	timeElapsed = timeElapsed + elapsed
-	if (timeElapsed > .5) then
-		timeElapsed = 0
-        i = (i +1) % 255;
-        local r = i /255;
-        -- local nextMacro = getRestoShamanMacro();
-        -- DEFAULT_CHAT_FRAME:AddMessage(nextMacro);
+    timeElapsed = timeElapsed + elapsed
+    if (timeElapsed > 0.5) then
+        timeElapsed = 0
 
-        DEFAULT_CHAT_FRAME:AddMessage(i);
-        MacroButton:SetAttribute("macrotext",nextMacro);
-        drawPixel(r,0,0)
-		-- do something
-	end
+        local key, target = RestoShaman.getRestoShamanMacro()
+        -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
+        local r = key / 255
+        local g = target / 255
+        drawPixel(r, g, 0)
+    end
 end)
+
+-- Helper: Initialize keybinds to target raid members (1-40) using Numpad keys and modifiers
+local function initTargettingKeybinds()
+    for i = 1, 40 do
+        local numpadIndex = math.floor((i - 1) / 4)
+        local modIndex = (i - 1) % 4
+
+        -- Determine modifier
+        local modifier = ""
+        if modIndex == 1 then
+            modifier = "CTRL-"
+        elseif modIndex == 2 then
+            modifier = "SHIFT-"
+        elseif modIndex == 3 then
+            modifier = "ALT-"
+        end
+
+        -- Numpad key (0 to 9)
+        local numpadKey = numpadIndex
+
+        -- Construct binding string
+        local bindingKey = modifier .. "NUMPAD" .. numpadKey
+
+        -- Create a unique button for this target
+        local buttonName = "TargetButton_" .. i
+        local button = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
+        button:SetAttribute("type", "macro")
+        SetBindingClick(bindingKey, buttonName)
+        button:SetAttribute("macrotext", "/target raid" .. i)
+
+        -- Bind the key to this button
+
+        DEFAULT_CHAT_FRAME:AddMessage(bindingKey);
+    end
+end
+
+function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
+
+end
+local function init(msg, editBox)
+    DEFAULT_CHAT_FRAME:AddMessage("INIT");
+    initTargettingKeybinds()
+    RestoShaman.initRestoShamanKeybinds()
+end
+SlashCmdList["MBOX"] = init; -- Also a valid assignment strategy
