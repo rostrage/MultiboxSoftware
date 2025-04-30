@@ -73,13 +73,13 @@ end
 -- Initialize keybinds for macros in macroMap using secure buttons and SetBindingClick
 local function initRestoShamanKeybinds()
     local macroKeys = {
-        [MacroTypes.WATER_SHIELD] = "W",
-        [MacroTypes.EARTHLIVING_WEAPON] = "E",
-        [MacroTypes.EARTH_SHIELD_FOCUS] = "F",
-        [MacroTypes.CHAIN_HEAL] = "C",
-        [MacroTypes.LESSER_HEALING_WAVE] = "L",
-        [MacroTypes.RIPTIDE] = "R",
-        [MacroTypes.DOING_NOTHING] = "D"
+        [MacroTypes.WATER_SHIELD] = "F1",
+        [MacroTypes.EARTHLIVING_WEAPON] = "F2",
+        [MacroTypes.EARTH_SHIELD_FOCUS] = "F3",
+        [MacroTypes.CHAIN_HEAL] = "F4",
+        [MacroTypes.LESSER_HEALING_WAVE] = "F5",
+        [MacroTypes.RIPTIDE] = "F6",
+        [MacroTypes.DOING_NOTHING] = "F7"
     }
 
     for key, binding in pairs(macroKeys) do
@@ -91,10 +91,10 @@ local function initRestoShamanKeybinds()
         -- Create the button and set its attributes
         local button = CreateFrame("Button", buttonName, nil, "SecureActionButtonTemplate")
         button:SetAttribute("type", "macro")
+        SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
 
         -- Bind to a unique key (e.g., 'W', 'E')
-        SetBindingClick(binding, buttonName)
     end
 end
 
