@@ -63,7 +63,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         GetWindowTextW(hwnd, &mut title_buf);
 
         let title_str = String::from_utf16_lossy(&title_buf);
-        if title_str.starts_with("World of Warcraft\0") {
+        if title_str == "World of Warcraft\0" {
             HWNDS.push(hwnd);
         }
     }
