@@ -1,12 +1,12 @@
 -- Define named constants for macro types (simulating enums)
 local MacroTypes = {
-    WATER_SHIELD = 0,
-    EARTHLIVING_WEAPON = 1,
-    EARTH_SHIELD_FOCUS = 2,
-    CHAIN_HEAL = 3,
-    LESSER_HEALING_WAVE = 4,
-    RIPTIDE = 5,
-    DOING_NOTHING = 6
+    DOING_NOTHING = 0,
+    WATER_SHIELD = 1,
+    EARTHLIVING_WEAPON = 2,
+    EARTH_SHIELD_FOCUS = 3,
+    CHAIN_HEAL = 4,
+    LESSER_HEALING_WAVE = 5,
+    RIPTIDE = 6,
 }
 
 -- Map of macro strings for each key (0 to n)
@@ -78,8 +78,7 @@ local function initRestoShamanKeybinds()
         [MacroTypes.EARTH_SHIELD_FOCUS] = "F3",
         [MacroTypes.CHAIN_HEAL] = "F4",
         [MacroTypes.LESSER_HEALING_WAVE] = "F5",
-        [MacroTypes.RIPTIDE] = "F6",
-        [MacroTypes.DOING_NOTHING] = "F7"
+        [MacroTypes.RIPTIDE] = "F6"
     }
 
     for key, binding in pairs(macroKeys) do
@@ -93,8 +92,6 @@ local function initRestoShamanKeybinds()
         button:SetAttribute("type", "macro")
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
-
-        -- Bind to a unique key (e.g., 'W', 'E')
     end
 end
 
