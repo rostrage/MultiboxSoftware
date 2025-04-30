@@ -27,6 +27,7 @@ frame:HookScript("OnUpdate", function(self, elapsed)
         -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
         local r = key / 255
         local g = target / 255
+        -- DEFAULT_CHAT_FRAME:AddMessage(target);
         drawPixel(r, g, 0)
     end
 end)
@@ -58,7 +59,11 @@ local function initTargettingKeybinds()
         local button = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
         button:SetAttribute("type", "macro")
         SetBindingClick(bindingKey, buttonName)
-        button:SetAttribute("macrotext", "/target raid" .. i)
+        if i <=5 then
+            button:SetAttribute("macrotext", "/target party" .. i .. "\r\n/target raid" .. i)            
+        else
+            button:SetAttribute("macrotext", "/target raid" .. i)            
+        end
 
         -- Bind the key to this button
         end

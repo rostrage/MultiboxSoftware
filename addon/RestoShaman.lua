@@ -38,24 +38,42 @@ local function getRestoShamanMacro()
     local numtargets = 0
     local target = 0
     local targetPercent = 1.0
+    local raidmembers = GetNumRaidMembers()
+    if raidmembers == 0 then
+        for i = 1, 5 do
+            local u = GetUnitName("party" .. i)
+            if UnitIsPlayer(u) and UnitInRange(u) then
+                local health = UnitHealth(u)
+                local maxHealth = UnitHealthMax(u)
+                local percent = health / maxHealth
 
-    for i = 1, GetNumRaidMembers() do
-        local u = GetUnitName("raid" .. i)
-        if UnitIsPlayer(u) and UnitInRange(u) then
-            local health = UnitHealth(u)
-            local maxHealth = UnitHealthMax(u)
-            local percent = health / maxHealth
+                if percent < 1.0 then
+                    numtargets = numtargets + 1
+                    if percent < targetPercent then
+                        targetPercent = percent
+                        target = i
+                    end
+                end
+            end
+        end
+    else 
+        for i = 1, GetNumRaidMembers() do
+            local u = GetUnitName("raid" .. i)
+            if UnitIsPlayer(u) and UnitInRange(u) then
+                local health = UnitHealth(u)
+                local maxHealth = UnitHealthMax(u)
+                local percent = health / maxHealth
 
-            if percent < 1.0 then
-                numtargets = numtargets + 1
-                if percent < targetPercent then
-                    targetPercent = percent
-                    target = i
+                if percent < 1.0 then
+                    numtargets = numtargets + 1
+                    if percent < targetPercent then
+                        targetPercent = percent
+                        target = i
+                    end
                 end
             end
         end
     end
-
     if numtargets > 1 then
         return MacroTypes.CHAIN_HEAL, target
     elseif numtargets > 0 then
