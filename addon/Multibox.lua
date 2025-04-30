@@ -7,7 +7,7 @@ frame:SetSize(1, 1)
 -- Texture to draw pixel color
 local texture = frame:CreateTexture()
 texture:SetPoint("TOPLEFT", 0, 0)
-texture:SetSize(100, 100)
+texture:SetSize(1, 1)
 texture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
 
 -- Draws a single pixel with given RGB values (0-1 range)
@@ -20,7 +20,7 @@ end
 local timeElapsed = 0
 frame:HookScript("OnUpdate", function(self, elapsed)
     timeElapsed = timeElapsed + elapsed
-    if (timeElapsed > 0.5) then
+    if (timeElapsed > 0.1) then
         timeElapsed = 0
 
         local key, target = RestoShaman.getRestoShamanMacro()
@@ -61,9 +61,7 @@ local function initTargettingKeybinds()
         button:SetAttribute("macrotext", "/target raid" .. i)
 
         -- Bind the key to this button
-
-        DEFAULT_CHAT_FRAME:AddMessage(bindingKey);
-    end
+        end
 end
 
 function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
