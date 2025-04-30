@@ -13,10 +13,9 @@ use windows::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel, ReleaseDC, SelectObject, SRCCOPY
         },
         UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2},
+            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
             WindowsAndMessaging::{
-                PostMessageW, WM_KEYDOWN, WM_KEYUP,
-                IsWindow, EnumWindows, GetWindowTextLengthW, GetWindowTextW
+                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP
             },
         },
     },
@@ -77,6 +76,10 @@ fn main() {
         let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
         scancode_map.insert(0x00, VK_F1);  // Red = 0 → 'F1' key
         scancode_map.insert(0x01, VK_F2);  // Red = 255 → 'F2' key
+        scancode_map.insert(0x02, VK_F3);  // Red = 255 → 'F2' key
+        scancode_map.insert(0x03, VK_F4);  // Red = 255 → 'F2' key
+        scancode_map.insert(0x04, VK_F5);  // Red = 255 → 'F2' key
+        scancode_map.insert(0x05, VK_F6);  // Red = 255 → 'F2' key
 
         let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
 
@@ -167,12 +170,15 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                 let actual_color = GetPixel(hdc_mem_dc, 0, 0);
 
                 // Extract red component
-                let blue = ((actual_color.0 >> 24) & 0xFF) as u8;
+                let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
+                let green = ((actual_color.0 >> 8) & 0xFF) as u8;
                 let red = (actual_color.0 & 0xFF) as u8;
+                println!("color {:x} {:x} {:x} {:x}", actual_color.0, blue, green, red);
 
                 // Press the corresponding key if found in map
                 let scancode_map = scancode_map_arc.lock().unwrap();
                 if let Some(&scancode) = scancode_map.get(&red) {
+                    send_target_combination(hwnd, green);
                     PostMessageW(
                         Some(hwnd),
                         WM_KEYDOWN as u32,
@@ -200,3 +206,69 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
         }
     }
 }
+
+fn send_target_combination(hwnd: HWND, input: u8) {
+    // 0 = untargeted
+    if input == 0 {
+        return;
+    }
+    // Calculate target index and modifier based on Lua logic
+    let mod_index = (input - 1) % 4;
+    let numpad_index = (input -1) / 4;
+    println!("Targeting {:x} {:x} {:x}", input, mod_index, numpad_index);
+
+    // Determine the modifier virtual key
+    let modifier_vk: Option<VIRTUAL_KEY> = match mod_index {
+        1 => Some(VK_LCONTROL),
+        2 => Some(VK_LSHIFT),
+        3 => Some(VK_LMENU),
+        _ => None,
+    };
+
+    // Calculate numpad key (0-9)
+    let numpad_key: usize = <u16 as Into<usize>>::into(VK_NUMPAD0.0) + (numpad_index as usize);
+    unsafe {
+        // Send keydown for modifier (if present)
+        if let Some(modifier) = modifier_vk {
+            PostMessageW(
+                Some(hwnd),
+                WM_KEYDOWN as u32,
+                WPARAM(modifier.0.into()),
+                LPARAM(0),
+            );
+        }
+
+        // Send keydown for numpad
+        PostMessageW(
+            Some(hwnd),
+            WM_KEYDOWN as u32,
+            WPARAM(numpad_key),
+            LPARAM(0),
+        );
+
+        // Wait a bit to ensure the key is registered
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        // Send keyup for numpad
+        PostMessageW(
+            Some(hwnd),
+            WM_KEYUP as u32,
+            WPARAM(numpad_key),
+            LPARAM(0),
+        );
+
+        // Send keyup for modifier (if present)
+        if let Some(modifier) = modifier_vk {
+            PostMessageW(
+                Some(hwnd),
+                WM_KEYUP as u32,
+                WPARAM(modifier.0.into()),
+                LPARAM(0),
+            );
+        }
+
+        // Optional: add delay after all actions
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
