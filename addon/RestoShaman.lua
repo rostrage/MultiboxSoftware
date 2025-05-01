@@ -22,6 +22,11 @@ local macroMap = {
 
 -- Function to return a tuple (key, target) based on current conditions
 local function getRestoShamanMacro()
+    
+    if  UnitIsDeadOrGhost("player") then
+        return MacroTypes.DOING_NOTHING, 0
+    end
+
     if not UnitBuff("player", "Water Shield") then
         return MacroTypes.WATER_SHIELD, 0
     end
@@ -31,7 +36,7 @@ local function getRestoShamanMacro()
     end
 
     local focusName, _ = UnitName("focus")
-    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") then
+    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") and not UnitIsDeadOrGhost("focus") then
         return MacroTypes.EARTH_SHIELD_FOCUS, 0
     end
 
@@ -40,9 +45,9 @@ local function getRestoShamanMacro()
     local targetPercent = 1.0
     local raidmembers = GetNumRaidMembers()
     if raidmembers == 0 then
-        for i = 1, 5 do
+        for i = 1, 4 do
             local u = GetUnitName("party" .. i)
-            if UnitIsPlayer(u) and UnitInRange(u) then
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) then
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
@@ -56,10 +61,24 @@ local function getRestoShamanMacro()
                 end
             end
         end
+        local u = GetUnitName("player")
+        if UnitIsPlayer(u) and UnitInRange(u) then
+            local health = UnitHealth(u)
+            local maxHealth = UnitHealthMax(u)
+            local percent = health / maxHealth
+
+            if percent < 1.0 then
+                numtargets = numtargets + 1
+                if percent < targetPercent then
+                    targetPercent = percent
+                    target = 5
+                end
+            end
+        end
     else 
         for i = 1, GetNumRaidMembers() do
             local u = GetUnitName("raid" .. i)
-            if UnitIsPlayer(u) and UnitInRange(u) then
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) then
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
@@ -75,7 +94,12 @@ local function getRestoShamanMacro()
         end
     end
     if numtargets > 1 then
-        return MacroTypes.CHAIN_HEAL, target
+        local start, duration, enabled, modRate = GetSpellCooldown("Riptide")
+        if start > 0 and duration > 0 then
+            return MacroTypes.CHAIN_HEAL, target
+        else
+            return MacroTypes.RIPTIDE, target
+        end
     elseif numtargets > 0 then
         local start, duration, enabled, modRate = GetSpellCooldown("Riptide")
         if start > 0 and duration > 0 then
