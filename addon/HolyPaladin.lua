@@ -1,10 +1,10 @@
 -- Define named constants for macro types (simulating enums)
 local MacroTypes = {
-    DOING_NOTHING = 0
+    DOING_NOTHING = 0,
     BEACON_OF_LIGHT = 1,
     DIVINE_PLEA = 2,
     JUDGEMENT_OF_LIGHT = 3,
-    HOLY_LIGHT = 4,
+    HOLY_LIGHT = 4
 }
 
 -- Map of macro strings for each key (0 to n)
@@ -49,15 +49,15 @@ local function getHolyPaladinMacro()
         local unit = "raid" .. i
         if UnitIsPlayer(unit) and UnitInRange(unit) then
             local name = UnitName(unit)
-            if name == focusName then continue end -- Skip the focus target
+            if not name == focusName then -- Skip the focus target
+                local health = UnitHealth(unit)
+                local maxHealth = UnitHealthMax(unit)
+                local percent = health / maxHealth
 
-            local health = UnitHealth(unit)
-            local maxHealth = UnitHealthMax(unit)
-            local percent = health / maxHealth
-
-            if percent < lowestPercent then
-                lowestPercent = percent
-                targetIndex = i
+                if percent < lowestPercent then
+                    lowestPercent = percent
+                    targetIndex = i
+                end
             end
         end
     end

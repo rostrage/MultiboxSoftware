@@ -5,4 +5,6 @@
 ## Notes: Nothing
 
 RestoShaman.lua
+RetriPaladin.lua
+HolyPaladin.lua
 Multibox.lua

@@ -13,7 +13,7 @@ use windows::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel, ReleaseDC, SelectObject, SRCCOPY
         },
         UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
+            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
             WindowsAndMessaging::{
                 EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP
             },
@@ -109,7 +109,7 @@ impl Counter {
 }
 
 fn main() {
-    iced::run("A cool counter", Counter::update, Counter::view);
+    // iced::run("A cool counter", Counter::update, Counter::view);
     unsafe {
         // Initialize scancode mapping
         let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
@@ -119,6 +119,8 @@ fn main() {
         scancode_map.insert(0x04, VK_F4);
         scancode_map.insert(0x05, VK_F5);
         scancode_map.insert(0x06, VK_F6);
+        scancode_map.insert(0x07, VK_F7);
+        scancode_map.insert(0x08, VK_F8);
 
         let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
 

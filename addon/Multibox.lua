@@ -9,7 +9,7 @@ local texture = frame:CreateTexture()
 texture:SetPoint("TOPLEFT", 0, 0)
 texture:SetSize(1, 1)
 texture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
-
+local getNextMacro = RestoShaman.getRestoShamanMacro;
 -- Draws a single pixel with given RGB values (0-1 range)
 local function drawPixel(r, g, b)
     texture:SetVertexColor(r, g, b)
@@ -23,7 +23,7 @@ frame:HookScript("OnUpdate", function(self, elapsed)
     if (timeElapsed > 0.1) then
         timeElapsed = 0
 
-        local key, target = RestoShaman.getRestoShamanMacro()
+        local key, target = getNextMacro()
         -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
         local r = key / 255
         local g = target / 255
@@ -59,22 +59,39 @@ local function initTargettingKeybinds()
         local button = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
         button:SetAttribute("type", "macro")
         SetBindingClick(bindingKey, buttonName)
-        if i <=5 then
-            button:SetAttribute("macrotext", "/target party" .. i .. "\r\n/target raid" .. i)            
+        if i <= 5 then
+            button:SetAttribute("macrotext", "/target party" .. i .. "\r\n/target raid" .. i)
         else
-            button:SetAttribute("macrotext", "/target raid" .. i)            
+            button:SetAttribute("macrotext", "/target raid" .. i)
         end
 
         -- Bind the key to this button
-        end
+    end
 end
 
 function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
 
 end
 local function init(msg, editBox)
-    DEFAULT_CHAT_FRAME:AddMessage("INIT");
-    initTargettingKeybinds()
-    RestoShaman.initRestoShamanKeybinds()
+    initTargettingKeybinds();
+    local playerClass = UnitClass("player");
+    if playerClass == "Paladin" then
+        _, _, _, _, currentRank = GetTalentInfo(3, 26)
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT RETRI PALADIN");
+            RetriPaladin.initRetriPaladinKeybinds();
+            getNextMacro = RetriPaladin.getRetriPaladinMacro;
+        end
+        _, _, _, _, currentRank = GetTalentInfo(1, 26)
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT HOLY PALADIN");
+            HolyPaladin.initHolyPaladinKeybinds();
+            getNextMacro = HolyPaladin.getHolyPaladinMacro;
+        end
+    elseif playerClass == "Shaman" then
+        DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
+        RestoShaman.initRestoShamanKeybinds();
+        getNextMacro = RestoShaman.getRestoShamanMacro;
+    end
 end
 SlashCmdList["MBOX"] = init; -- Also a valid assignment strategy

@@ -52,7 +52,7 @@ local function getRestoShamanMacro()
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
 
-                if percent < 1.0 then
+                if percent < 0.95 then
                     numtargets = numtargets + 1
                     if percent < targetPercent then
                         targetPercent = percent
@@ -67,7 +67,7 @@ local function getRestoShamanMacro()
             local maxHealth = UnitHealthMax(u)
             local percent = health / maxHealth
 
-            if percent < 1.0 then
+            if percent < 0.95 then
                 numtargets = numtargets + 1
                 if percent < targetPercent then
                     targetPercent = percent
@@ -83,7 +83,7 @@ local function getRestoShamanMacro()
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
 
-                if percent < 1.0 then
+                if percent < 0.95 then
                     numtargets = numtargets + 1
                     if percent < targetPercent then
                         targetPercent = percent
