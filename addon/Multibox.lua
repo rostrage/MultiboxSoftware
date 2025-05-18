@@ -59,8 +59,10 @@ local function initTargettingKeybinds()
         local button = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
         button:SetAttribute("type", "macro")
         SetBindingClick(bindingKey, buttonName)
-        if i <= 5 then
+        if i <= 4 then
             button:SetAttribute("macrotext", "/target party" .. i .. "\r\n/target raid" .. i)
+        elseif i == 5 then
+            button:SetAttribute("macrotext", "/target player")
         else
             button:SetAttribute("macrotext", "/target raid" .. i)
         end

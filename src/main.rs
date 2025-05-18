@@ -214,7 +214,7 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                 let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
                 let green = ((actual_color.0 >> 8) & 0xFF) as u8;
                 let red = (actual_color.0 & 0xFF) as u8;
-                println!("color {:x} {:x} {:x} {:x}", actual_color.0, blue, green, red);
+                // println!("color {:x} {:x} {:x} {:x}", actual_color.0, blue, green, red);
 
                 // Press the corresponding key if found in map
                 let scancode_map = scancode_map_arc.lock().unwrap();
@@ -226,7 +226,7 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                         WPARAM(scancode.0.into()),
                         LPARAM(0)
                     );
-                    // print!("Sending key {:x}")
+                    println!("Sending key {:x}", scancode.0);
                     sleep(Duration::from_millis(10));
                     PostMessageW(
                         Some(hwnd),
