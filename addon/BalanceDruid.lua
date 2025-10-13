@@ -28,10 +28,8 @@ local LUNAR_ECLIPSE_BUFF_NAME = "Eclipse (Lunar)"
 local SOLAR_ECLIPSE_BUFF_NAME = "Eclipse (Solar)"
 local lunarEclipseActive = false
 local lunarEclipseAppliedAt = nil
-local lunarEclipseLostAt = nil
 local solarEclipseActive = false
 local solarEclipseAppliedAt = nil
-local solarEclipseLostAt = nil
 
 local function onUnitAura(self, event, unit)
     if unit ~= "player" then return end
@@ -40,18 +38,20 @@ local function onUnitAura(self, event, unit)
     local hasSolarBuff = UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME) ~= nil
 
     if hasLunarBuff and not lunarEclipseActive then
+        DEFAULT_CHAT_FRAME:AddMessage("Lunar Eclipse activated")
         lunarEclipseActive = true
         lunarEclipseAppliedAt = GetTime()
     elseif not hasLunarBuff and lunarEclipseActive then
+        DEFAULT_CHAT_FRAME:AddMessage("Lunar Eclipse expired")
         lunarEclipseActive = false
-        lunarEclipseLostAt = GetTime()
     end
     if hasSolarBuff and not solarEclipseActive then
+        DEFAULT_CHAT_FRAME:AddMessage("Solar Eclipse activated")
         solarEclipseActive = true
         solarEclipseAppliedAt = GetTime()
     elseif not hasSolarBuff and solarEclipseActive then
+        DEFAULT_CHAT_FRAME:AddMessage("Solar Eclipse expired")
         solarEclipseActive = false
-        solarEclipseLostAt = GetTime()
     end
 end
 
@@ -71,10 +71,8 @@ local function isLunarEclipseOnCooldown()
 
     local now = GetTime()
     -- Cooldown logic:
-    -- Available 30s after applied, equivalently 15s after lost (buff lasts 15s)
-    local readyAtFromApplied = lunarEclipseAppliedAt and (lunarEclipseAppliedAt + 30) or 0
-    local readyAtFromLost = lunarEclipseLostAt and (lunarEclipseLostAt + 15) or 0
-    local readyAt = math.max(readyAtFromApplied, readyAtFromLost)
+    -- Available 30s after applied
+    local readyAt = lunarEclipseAppliedAt and (lunarEclipseAppliedAt + 30) or 0
 
     return now < readyAt
 end
@@ -92,9 +90,7 @@ local function isSolarEclipseOnCooldown()
         return true
     end
     local now = GetTime()
-    local readyAtFromApplied = solarEclipseAppliedAt and (solarEclipseAppliedAt + 30) or 0
-    local readyAtFromLost = solarEclipseLostAt and (solarEclipseLostAt + 15) or 0
-    local readyAt = math.max(readyAtFromApplied, readyAtFromLost)
+    local readyAt = solarEclipseAppliedAt and (solarEclipseAppliedAt + 30) or 0
     return now < readyAt
 end
 
