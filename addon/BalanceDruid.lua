@@ -126,7 +126,7 @@ local function getBalanceDruidMacro()
     end
 
     -- 4) Moonfire
-    if not UnitDebuff("focustarget", "Moonfire") then
+    if not UnitDebuff("focustarget", "Moonfire") and not UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME) then
         return MacroTypes.MOONFIRE, 0
     end
 
