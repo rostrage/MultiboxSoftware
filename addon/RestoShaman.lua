@@ -17,7 +17,7 @@ local macroMap = {
     [MacroTypes.CHAIN_HEAL] = "/cast Chain Heal",
     [MacroTypes.LESSER_HEALING_WAVE] = "/cast Lesser Healing Wave",
     [MacroTypes.RIPTIDE] = "/cast Riptide",
-    [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
+    [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
 -- Function to return a tuple (key, target) based on current conditions
@@ -42,7 +42,7 @@ local function getRestoShamanMacro()
 
     local numtargets = 0
     local target = 0
-    local targetPercent = 1.0
+    local targetPercent = 0.95
     local raidmembers = GetNumRaidMembers()
     if raidmembers == 0 then
         for i = 1, 4 do

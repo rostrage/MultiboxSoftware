@@ -13,7 +13,7 @@ local macroMap = {
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast [target=raidX] Holy Light", -- Dynamic target will be handled at runtime
-    [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
+    [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
 -- Function to return a tuple (key, target) based on current conditions

@@ -7,4 +7,5 @@
 RestoShaman.lua
 RetriPaladin.lua
 HolyPaladin.lua
+ShadowPriest.lua
 Multibox.lua

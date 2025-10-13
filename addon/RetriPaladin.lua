@@ -35,33 +35,33 @@ local function getRetriPaladinMacro()
         return MacroTypes.DOING_NOTHING, 0
     end
     local startJ, durationJ = GetSpellCooldown("Judgement of Light")
-    if startJ == 0 then
+    if startJ <= 0.1 then
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
     local startJ, durationJ = GetSpellCooldown("Divine Storm")
-    if startJ == 0 then
+    if startJ <= 0.1 then
         return MacroTypes.DIVINE_STORM, 0
     end
     local startJ, durationJ = GetSpellCooldown("Crusader Strike")
-    if startJ == 0 then
+    if startJ <= 0.1 then
         return MacroTypes.CRUSADER_STRIKE, 0
     end
     local startJ, durationJ = GetSpellCooldown("Hammer of Wrath")
     local health = UnitHealth("focustarget")
     local maxHealth = UnitHealthMax("focustarget")
-    if startJ == 0  and health/maxHealth < 0.2 then
+    if startJ <= 0.1  and health/maxHealth < 0.2 then
         return MacroTypes.HAMMER_OF_WRATH, 0
     end
     local startJ, durationJ = GetSpellCooldown("Consecration")
-    if startJ == 0 then
+    if startJ <= 0.1 then
         return MacroTypes.CONSECRATION, 0
     end
     local startJ, durationJ = GetSpellCooldown("Exorcism")
-    if startJ == 0 and UnitBuff("player", "The Art of War") then
+    if startJ <= 0.1 and UnitBuff("player", "The Art of War") then
         return MacroTypes.EXORCISM, 0
     end
     local startJ, durationJ = GetSpellCooldown("Divine Plea")
-    if startJ == 0 then
+    if startJ <= 0.1 then
         return MacroTypes.DIVINE_PLEA, 0
     end
     return MacroTypes.DOING_NOTHING, 0

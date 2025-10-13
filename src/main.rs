@@ -63,7 +63,8 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         GetWindowTextW(hwnd, &mut title_buf);
 
         let title_str = String::from_utf16_lossy(&title_buf);
-        if title_str == "World of Warcraft\0" {
+        // if title_str.starts_with("OMB 3") || title_str.starts_with("OMB 5") {
+        if title_str.starts_with("World of Warcraft") || title_str.starts_with("OMB 2") || title_str.starts_with("OMB 3") || title_str.starts_with("OMB 4"){
             HWNDS.push(hwnd);
         }
     }
@@ -256,7 +257,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
     // Calculate target index and modifier based on Lua logic
     let mod_index = (input - 1) % 4;
     let numpad_index = (input -1) / 4;
-    println!("Targeting {:x} {:x} {:x}", input, mod_index, numpad_index);
+    // println!("Targeting {:x} {:x} {:x}", input, mod_index, numpad_index);
 
     // Determine the modifier virtual key
     let modifier_vk: Option<VIRTUAL_KEY> = match mod_index {

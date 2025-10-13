@@ -94,6 +94,19 @@ local function init(msg, editBox)
         DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
         RestoShaman.initRestoShamanKeybinds();
         getNextMacro = RestoShaman.getRestoShamanMacro;
+    -- elseif playerClass == "Druid" then
+    --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
+    --     RestoDruid.initRestoDruidKeybinds();
+    --     getNextMacro = RestoDruid.getRestoDruidMacro;
+    elseif playerClass == "Priest" then
+        _, _, _, _, currentRank = GetTalentInfo(3, 27);
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT SHADOW PRIEST");
+            ShadowPriest.initShadowPriestKeybinds();
+            getNextMacro = ShadowPriest.getShadowPriestMacro;
+        end
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("CLASS NOT SUPPORTED");
     end
 end
 SlashCmdList["MBOX"] = init; -- Also a valid assignment strategy
