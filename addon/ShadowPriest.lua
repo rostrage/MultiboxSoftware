@@ -13,11 +13,11 @@ local MacroTypes = {
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
     [MacroTypes.BUFF_SEQUENCE] = "/castsequence Divine Spirit; Power Word: Fortitude; Shadowform; Vampiric Embrace; Inner Fire",
-    [MacroTypes.VAMPIRIC_TOUCH] = "/cast [target=focus] Vampiric Touch",
-    [MacroTypes.DEVOURING_PLAGUE] = "/cast [target=focus] Devouring Plague",
-    [MacroTypes.SHADOW_WORD_PAIN] = "/cast [target=focus] Shadow Word: Pain",
-    [MacroTypes.MIND_FLAY] = "/cast [target=focus] Mind Flay",
-    [MacroTypes.SHADOWFIEND] = "/cast [target=focus] Shadowfiend",
+    [MacroTypes.VAMPIRIC_TOUCH] = "/cast [target=focustarget] Vampiric Touch",
+    [MacroTypes.DEVOURING_PLAGUE] = "/cast [target=focustarget] Devouring Plague",
+    [MacroTypes.SHADOW_WORD_PAIN] = "/cast [target=focustarget] Shadow Word: Pain",
+    [MacroTypes.MIND_FLAY] = "/cast [target=focustarget] Mind Flay",
+    [MacroTypes.SHADOWFIEND] = "/cast [target=focustarget] Shadowfiend",
     [MacroTypes.DISPERSION] = "/cast Dispersion",
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }

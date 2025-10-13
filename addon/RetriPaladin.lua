@@ -12,19 +12,13 @@ local MacroTypes = {
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
-    [MacroTypes.JUDGEMENT_OF_LIGHT] = [[/assist focus
-/cast Judgement of Light]],
-    [MacroTypes.DIVINE_STORM] = [[/assist focus
-/cast Divine Storm]],
-    [MacroTypes.CRUSADER_STRIKE] = [[/assist focus
-/cast Crusader Strike]],
-    [MacroTypes.HAMMER_OF_WRATH] = [[/assist focus
-/cast Hammer of Wrath]],
-    [MacroTypes.CONSECRATION] = [[/assist focus
-/cast Consecration]],
-    [MacroTypes.EXORCISM] = [[/assist focus
-/cast Exorcism]],
-    [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
+    [MacroTypes.JUDGEMENT_OF_LIGHT] = /cast [target=focustarget] Judgement of Light,
+    [MacroTypes.DIVINE_STORM] = /cast [target=focustarget] Divine Storm,
+    [MacroTypes.CRUSADER_STRIKE] = /cast [target=focustarget] Crusader Strike,
+    [MacroTypes.HAMMER_OF_WRATH] = /cast [target=focustarget] Hammer of Wrath,
+    [MacroTypes.CONSECRATION] = /cast [target=focustarget] Consecration,
+    [MacroTypes.EXORCISM] = /cast [target=focustarget] Exorcism,
+    [MacroTypes.DIVINE_PLEA] = /cast Divine Plea,
     [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
 }
 
