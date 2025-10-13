@@ -12,7 +12,7 @@ local MacroTypes = {
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
-    [MacroTypes.BUFF_SEQUENCE] = "/castsequence Divine Spirit; Power Word: Fortitude; Shadowform; Vampiric Embrace; Inner Fire",
+    [MacroTypes.BUFF_SEQUENCE] = "/castsequence Divine Spirit, Power Word: Fortitude, Shadowform, Vampiric Embrace, Inner Fire",
     [MacroTypes.VAMPIRIC_TOUCH] = [[/use 10
 /cast [target=focustarget] Vampiric Touch]],
     [MacroTypes.DEVOURING_PLAGUE] = "/cast [target=focustarget] Devouring Plague",
@@ -25,6 +25,23 @@ local macroMap = {
     [MacroTypes.DISPERSION] = "/cast Dispersion",
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
+
+local lastVampiricTouchAppliedAt = nil
+
+-- Used to debounce Vampiric Touch applications
+local function onUnitSpellcastStart(self, event, unitTarget, spellName, spellRank)
+    if spellName == "Vampiric Touch" then
+        lastVampiricTouchAppliedAt = GetTime()
+    end
+end
+
+local function ensureAuraFrame()
+    if _G.ShadowPriestAuraFrame then return end
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("UNIT_SPELLCAST_START")
+    f:SetScript("OnEvent", onUnitSpellcastStart)
+    _G.ShadowPriestAuraFrame = f
+end
 
 -- Function to return a tuple (key, target) based on current conditions
 local function getShadowPriestMacro()
@@ -62,7 +79,7 @@ local function getShadowPriestMacro()
         end
         
         -- Check for Vampiric Touch on focus
-        if not UnitDebuff("focustarget", "Vampiric Touch") then
+        if not UnitDebuff("focustarget", "Vampiric Touch") and GetTime() > lastVampiricTouchAppliedAt + 2 then
             return MacroTypes.VAMPIRIC_TOUCH, 0
         end
 
@@ -107,6 +124,7 @@ local function initShadowPriestKeybinds()
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
     end
+    ensureAuraFrame()
 end
 
 -- Return module exports
