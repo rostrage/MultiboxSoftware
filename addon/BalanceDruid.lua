@@ -17,7 +17,8 @@ local macroMap = {
     [MacroTypes.MOONFIRE] = "/cast [target=focustarget] Moonfire",
     [MacroTypes.INSECT_SWARM] = "/cast [target=focustarget] Insect Swarm",
     [MacroTypes.STARFALL] = "/cast Starfall",
-    [MacroTypes.STARFIRE] = "/use 10 /cast [target=focustarget] Starfire",
+    [MacroTypes.STARFIRE] = [[/use 10;
+/cast [target=focustarget] Starfire]],
     [MacroTypes.WRATH] = "/cast [target=focustarget] Wrath",
     [MacroTypes.DOING_NOTHING] = "/stopcasting",
 }
@@ -111,13 +112,11 @@ local function getBalanceDruidMacro()
 
     -- 2) If not in combat or no valid focus target, do nothing
     if not UnitAffectingCombat("player") then
-        DEFAULT_CHAT_FRAME:AddMessage("Not in combat");
         return MacroTypes.DOING_NOTHING, 0
     end
 
     local focusName, _ = UnitName("focustarget")
     if not focusName or UnitIsDeadOrGhost("focustarget") then
-        DEFAULT_CHAT_FRAME:AddMessage("No valid focus target");
         return MacroTypes.DOING_NOTHING, 0
     end
 
