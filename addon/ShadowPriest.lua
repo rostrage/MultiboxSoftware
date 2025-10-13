@@ -12,7 +12,7 @@ local MacroTypes = {
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
-    [MacroTypes.BUFF_SEQUENCE] = "/castsequence Divine Spirit, Power Word: Fortitude, Shadowform, Vampiric Embrace, Inner Fire",
+    [MacroTypes.BUFF_SEQUENCE] = "/castsequence Divine Spirit, Power Word: Fortitude, Shadow Protection, Shadowform, Vampiric Embrace, Inner Fire",
     [MacroTypes.VAMPIRIC_TOUCH] = [[/use 10
 /cast [target=focustarget] Vampiric Touch]],
     [MacroTypes.DEVOURING_PLAGUE] = "/cast [target=focustarget] Devouring Plague",
