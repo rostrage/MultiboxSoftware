@@ -4,6 +4,7 @@
 ## Author: Test
 ## Notes: Nothing
 
+BalanceDruid.lua
 RestoShaman.lua
 RetriPaladin.lua
 HolyPaladin.lua

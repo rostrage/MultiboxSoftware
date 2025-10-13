@@ -6,6 +6,8 @@ local MacroTypes = {
     DEVOURING_PLAGUE = 3,
     SHADOW_WORD_PAIN = 4,
     MIND_FLAY = 5,
+    SHADOWFIEND = 6,
+    DISPERSION = 7,
 }
 
 -- Map of macro strings for each key (0 to n)
@@ -15,6 +17,8 @@ local macroMap = {
     [MacroTypes.DEVOURING_PLAGUE] = "/cast [target=focus] Devouring Plague",
     [MacroTypes.SHADOW_WORD_PAIN] = "/cast [target=focus] Shadow Word: Pain",
     [MacroTypes.MIND_FLAY] = "/cast [target=focus] Mind Flay",
+    [MacroTypes.SHADOWFIEND] = "/cast [target=focus] Shadowfiend",
+    [MacroTypes.DISPERSION] = "/cast Dispersion",
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
@@ -23,6 +27,12 @@ local function getShadowPriestMacro()
     
     if UnitIsDeadOrGhost("player") then
         return MacroTypes.DOING_NOTHING, 0
+    end
+
+    -- Use Dispersion if low on mana and not in combat
+    local currentMana = UnitPower("player", 0)
+    if currentMana and currentMana < 1000 and not UnitAffectingCombat("player") then
+        return MacroTypes.DISPERSION, 0
     end
 
     -- Check if any buffs are missing
@@ -40,7 +50,13 @@ local function getShadowPriestMacro()
 
     -- Check focus target for debuffs
     local focusName, _ = UnitName("focustarget")
-    if focusName and UnitInRange("focustarget") and not UnitIsDeadOrGhost("focustarget") then
+    if focusName and not UnitIsDeadOrGhost("focustarget") then
+        local start, duration, enabled, modRate = GetSpellCooldown("Shadowfiend")
+        if start <= 0.1 and not UnitBuff("player", "Shadowfiend") then
+            -- Highest priority in combat: Shadowfiend
+            return MacroTypes.SHADOWFIEND, 0
+        end
+        
         -- Check for Vampiric Touch on focus
         if not UnitDebuff("focustarget", "Vampiric Touch") then
             return MacroTypes.VAMPIRIC_TOUCH, 0
@@ -70,7 +86,9 @@ local function initShadowPriestKeybinds()
         [MacroTypes.VAMPIRIC_TOUCH] = "F2",
         [MacroTypes.DEVOURING_PLAGUE] = "F3",
         [MacroTypes.SHADOW_WORD_PAIN] = "F4",
-        [MacroTypes.MIND_FLAY] = "F5"
+        [MacroTypes.MIND_FLAY] = "F5",
+        [MacroTypes.SHADOWFIEND] = "F6",
+        [MacroTypes.DISPERSION] = "F7"
     }
 
     for key, binding in pairs(macroKeys) do

@@ -94,10 +94,33 @@ local function init(msg, editBox)
         DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
         RestoShaman.initRestoShamanKeybinds();
         getNextMacro = RestoShaman.getRestoShamanMacro;
-    -- elseif playerClass == "Druid" then
-    --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
-    --     RestoDruid.initRestoDruidKeybinds();
-    --     getNextMacro = RestoDruid.getRestoDruidMacro;
+    elseif playerClass == "Druid" then
+        _, _, _, _, currentRank = GetTalentInfo(1, 28);
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT BALANCE DRUID");
+            BalanceDruid.initBalanceDruidKeybinds();
+            getNextMacro = BalanceDruid.getBalanceDruidMacro;
+        end
+        -- -- Feral cat - Feral Aggression rank 5
+        -- _, _, _, _, currentRank = GetTalentInfo(2, 2);
+        -- if currentRank == 5 then
+        --     DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL CAT DRUID");
+        --     FeralDruid.initFeralDruidKeybinds();
+        --     getNextMacro = FeralDruid.getFeralDruidMacro;
+        -- end
+        -- -- Feral bear - Thick Hide rank 3
+        -- _, _, _, _, currentRank = GetTalentInfo(2, 5);
+        -- if currentRank == 3 then
+        --     DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL BEAR DRUID");
+        --     FeralDruid.initFeralDruidKeybinds();
+        --     getNextMacro = FeralDruid.getFeralDruidMacro;
+        -- end
+        -- _, _, _, _, currentRank = GetTalentInfo(3, 27);
+        -- if currentRank == 1 then
+        --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
+        --     RestoDruid.initRestoDruidKeybinds();
+        --     getNextMacro = RestoDruid.getRestoDruidMacro;
+        -- end
     elseif playerClass == "Priest" then
         _, _, _, _, currentRank = GetTalentInfo(3, 27);
         if currentRank == 1 then
