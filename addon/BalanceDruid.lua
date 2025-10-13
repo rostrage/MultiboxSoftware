@@ -77,14 +77,6 @@ local function isLunarEclipseOnCooldown()
     return now < readyAt
 end
 
-local function isSpellOnCooldown(spellName)
-    local start, duration, enable = GetSpellCooldown(spellName)
-    if enable == 0 then return true end
-    if not start or not duration then return false end
-    if duration == 0 then return false end
-    return (GetTime() < start + duration)
-end
-
 local function isSolarEclipseOnCooldown()
     if solarEclipseActive then
         return true
@@ -132,7 +124,9 @@ local function getBalanceDruidMacro()
     end
 
     -- 6) Starfall if not on cooldown
-    if not isSpellOnCooldown("Starfall") then
+    local start, duration, enabled, modRate = GetSpellCooldown("Starfall")
+
+    if start == 0 and duration == 0 then
         return MacroTypes.STARFALL, 0
     end
 
