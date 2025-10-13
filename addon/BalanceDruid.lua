@@ -137,7 +137,7 @@ local function getBalanceDruidMacro()
     end
 
     -- 7) If Lunar Eclipse active or it just finished and we are trying to get it again, cast Starfire
-    if UnitBuff("player", LUNAR_ECLIPSE_BUFF_NAME) or (isLunarEclipseOnCooldown() and not UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME)) then
+    if isLunarEclipseOnCooldown() and not UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME) then
         return MacroTypes.STARFIRE, 0
     end
 
@@ -165,6 +165,7 @@ local function initBalanceDruidKeybinds()
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
     end
+    ensureAuraFrame()
 end
 
 -- Return module exports
