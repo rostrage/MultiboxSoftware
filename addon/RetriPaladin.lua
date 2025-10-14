@@ -7,7 +7,8 @@ local MacroTypes = {
     HAMMER_OF_WRATH = 4,
     CONSECRATION = 5,
     EXORCISM = 6,
-    DIVINE_PLEA = 7
+    DIVINE_PLEA = 7,
+    AVENGING_WRATH = 8
 }
 
 -- Map of macro strings for each key (0 to n)
@@ -25,6 +26,7 @@ local macroMap = {
     [MacroTypes.EXORCISM] = [[/use 10;
 /cast [target=focustarget] Exorcism]],
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
+    [MacroTypes.AVENGING_WRATH] = "/cast Avenging Wrath",
     [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
 }
 
@@ -37,6 +39,10 @@ local function getRetriPaladinMacro()
     local startJ, durationJ = GetSpellCooldown("Judgement of Light")
     if startJ <= 0.1 then
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
+    end
+    local startJ, durationJ = GetSpellCooldown("Avenging Wrath")
+    if startJ <= 0.1 then
+        return MacroTypes.AVENGING_WRATH, 0
     end
     local startJ, durationJ = GetSpellCooldown("Divine Storm")
     if startJ <= 0.1 then
@@ -77,7 +83,8 @@ local function initRetriPaladinKeybinds()
         [MacroTypes.CONSECRATION] = "F5",
         [MacroTypes.EXORCISM] = "F6",
         [MacroTypes.DIVINE_PLEA] = "F7",
-        [MacroTypes.DOING_NOTHING] = "F8"
+        [MacroTypes.AVENGING_WRATH] = "F8",
+        [MacroTypes.DOING_NOTHING] = "F9",
     }
 
     for key, binding in pairs(macroKeys) do
