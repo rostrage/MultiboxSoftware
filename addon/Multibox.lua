@@ -108,13 +108,13 @@ local function init(msg, editBox)
         --     FeralDruid.initFeralDruidKeybinds();
         --     getNextMacro = FeralDruid.getFeralDruidMacro;
         -- end
-        -- -- Feral bear - Thick Hide rank 3
-        -- _, _, _, _, currentRank = GetTalentInfo(2, 5);
-        -- if currentRank == 3 then
-        --     DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL BEAR DRUID");
-        --     FeralDruid.initFeralDruidKeybinds();
-        --     getNextMacro = FeralDruid.getFeralDruidMacro;
-        -- end
+        -- Feral bear - Thick Hide rank 3
+        _, _, _, _, currentRank = GetTalentInfo(2, 5);
+        if currentRank == 3 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL BEAR DRUID");
+            FeralBearDruid.initFeralBearDruidKeybinds();
+            getNextMacro = FeralBearDruid.getFeralBearDruidMacro;
+        end
         -- _, _, _, _, currentRank = GetTalentInfo(3, 27);
         -- if currentRank == 1 then
         --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");

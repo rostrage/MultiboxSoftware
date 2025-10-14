@@ -6,6 +6,7 @@
 
 BalanceDruid.lua
 DemonologyWarlock.lua
+FeralBearDruid.lua
 RestoShaman.lua
 RetriPaladin.lua
 HolyPaladin.lua
