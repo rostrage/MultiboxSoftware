@@ -55,15 +55,8 @@ end
 -- Function to return a tuple (key, target) based on current conditions
 local function getDemonologyWarlockMacro()
     
-    if UnitIsDeadOrGhost("player") then
+    if UnitIsDeadOrGhost("player") or IsMounted()  then
         return MacroTypes.DOING_NOTHING, 0
-    end
-
-    -- Check if any buffs are missing
-    if not UnitBuff("player", "Fel Armor") or 
-       not UnitBuff("player", "Soul Link") or 
-       not UnitBuff("player", "Master Demonologist") then
-        return MacroTypes.BUFF_SEQUENCE, 0
     end
 
     if not UnitAffectingCombat("player") then
@@ -75,7 +68,12 @@ local function getDemonologyWarlockMacro()
     -- Check focus target for debuffs and damage rotation
     local focusName, _ = UnitName("focustarget")
     if focusName and not UnitIsDeadOrGhost("focustarget") then
-        
+        -- Check if any buffs are missing
+        if not UnitBuff("player", "Fel Armor") or 
+        not UnitBuff("player", "Soul Link") or 
+        not UnitBuff("player", "Master Demonologist") then
+            return MacroTypes.BUFF_SEQUENCE, 0
+        end 
         -- Check for Life Tap buff (highest priority in combat)
         -- 655 mana is the minimum to cast most spells in our rotation, so it's double that so we cast it immediately after our last spell that consumed mana
         if not UnitBuff("player", "Life Tap") or UnitPower("player", 0) < 1310 then

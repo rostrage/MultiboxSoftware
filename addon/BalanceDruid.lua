@@ -89,7 +89,7 @@ end
 -- Function to return a tuple (key, target) based on current conditions
 local function getBalanceDruidMacro()
 
-    if UnitIsDeadOrGhost("player") then
+    if UnitIsDeadOrGhost("player") or IsMounted()  then
         return MacroTypes.DOING_NOTHING, 0
     end
 
