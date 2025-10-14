@@ -13,7 +13,7 @@ use windows::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel, ReleaseDC, SelectObject, SRCCOPY
         },
         UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
+            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
             WindowsAndMessaging::{
                 EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP
             },
@@ -122,6 +122,10 @@ fn main() {
         scancode_map.insert(0x06, VK_F6);
         scancode_map.insert(0x07, VK_F7);
         scancode_map.insert(0x08, VK_F8);
+        scancode_map.insert(0x09, VK_F9);
+        scancode_map.insert(0x0A, VK_F10);
+        scancode_map.insert(0x0B, VK_F11);
+        scancode_map.insert(0x0C, VK_F12);
 
         let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
 
@@ -131,7 +135,7 @@ fn main() {
         // Start the watcher thread
         std::thread::spawn(move || {
             loop {
-                sleep(Duration::from_millis(100));
+                sleep(Duration::from_millis(1000));
 
                 // Find all current windows with target title
                 let hwnds = find_all_windows_with_title();
@@ -235,10 +239,11 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                         WPARAM(scancode.0.into()),
                         LPARAM(0)
                     );
+                    sleep(Duration::from_millis(100));
                 }
 
                 // Sleep between checks
-                sleep(Duration::from_millis(100));
+                sleep(Duration::from_millis(15));
             }
 
             // Clean up GDI resources

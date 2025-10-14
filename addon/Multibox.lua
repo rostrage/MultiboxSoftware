@@ -128,6 +128,13 @@ local function init(msg, editBox)
             ShadowPriest.initShadowPriestKeybinds();
             getNextMacro = ShadowPriest.getShadowPriestMacro;
         end
+    elseif playerClass == "Warlock" then
+        _, _, _, _, currentRank = GetTalentInfo(2, 27);
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT DEMONOLOGY WARLOCK");
+            DemonologyWarlock.initDemonologyWarlockKeybinds();
+            getNextMacro = DemonologyWarlock.getDemonologyWarlockMacro;
+        end
     else
         DEFAULT_CHAT_FRAME:AddMessage("CLASS NOT SUPPORTED");
     end

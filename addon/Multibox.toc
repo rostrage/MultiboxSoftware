@@ -5,6 +5,7 @@
 ## Notes: Nothing
 
 BalanceDruid.lua
+DemonologyWarlock.lua
 RestoShaman.lua
 RetriPaladin.lua
 HolyPaladin.lua
