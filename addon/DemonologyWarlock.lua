@@ -17,20 +17,25 @@ local MacroTypes = {
 local macroMap = {
     [MacroTypes.BUFF_SEQUENCE] = "/castsequence Fel Armor, Summon Felguard, Soul Link",
     [MacroTypes.LIFE_TAP] = "/cast Life Tap",
-    [MacroTypes.CORRUPTION] = "/cast [target=focustarget] Corruption",
-    [MacroTypes.CURSE_OF_DOOM] = "/cast [target=focustarget] Curse of Doom",
-    [MacroTypes.IMMOLATE] = "/cast [target=focustarget] Immolate",
+    [MacroTypes.CORRUPTION] = [[/cast [pet:Felguard] Demonic Empowerment
+/cast [target=focustarget] Corruption]],
+    [MacroTypes.CURSE_OF_DOOM] = [[/cast [pet:Felguard] Demonic Empowerment
+/cast [target=focustarget] Curse of Doom]],
+    [MacroTypes.IMMOLATE] = [[/cast [pet:Felguard] Demonic Empowerment
+/cast [target=focustarget] Immolate]],
     [MacroTypes.SHADOW_BOLT] = [[/use 10
+/cast [pet:Felguard] Demonic Empowerment
 /cast [target=focustarget] Shadow Bolt]],
     [MacroTypes.METAMORPHOSIS] = "/cast Metamorphosis",
     [MacroTypes.IMMOLATION_AURA] = "/cast Immolation Aura",
     [MacroTypes.SOUL_FIRE] = [[/use 10
+/cast [pet:Felguard] Demonic Empowerment
 /cast [target=focustarget] Soul Fire]],
     [MacroTypes.INCINERATE] = "/cast [target=focustarget] Incinerate",
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
-local lastImmolateAppliedAt = nil
+local lastImmolateAppliedAt = 0
 
 -- Used to debounce Immolate applications
 local function onUnitSpellcastStart(self, event, unitTarget, spellName, spellRank)
@@ -58,7 +63,6 @@ local function getDemonologyWarlockMacro()
     if not UnitBuff("player", "Fel Armor") or 
        not UnitBuff("player", "Soul Link") or 
        not UnitBuff("player", "Master Demonologist") then
-        DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting buff sequence");
         return MacroTypes.BUFF_SEQUENCE, 0
     end
 
@@ -75,62 +79,53 @@ local function getDemonologyWarlockMacro()
         -- Check for Life Tap buff (highest priority in combat)
         -- 655 mana is the minimum to cast most spells in our rotation, so it's double that so we cast it immediately after our last spell that consumed mana
         if not UnitBuff("player", "Life Tap") or UnitPower("player", 0) < 1310 then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Life Tap");
             return MacroTypes.LIFE_TAP, 0
         end
 
         -- Check for Curse of Doom on focus
-        if not UnitDebuff("focustarget", "Curse of Doom") and not GetSpellCooldown("Curse of Doom") then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Curse of Doom");
+        local start, duration, enabled, modRate = GetSpellCooldown("Curse of Doom")
+        if not UnitDebuff("focustarget", "Curse of Doom") and start <= 0.1  then
             return MacroTypes.CURSE_OF_DOOM, 0
         end
 
         -- Check for Immolate on focus (with debouncing)
         if not UnitDebuff("focustarget", "Immolate") and GetTime() > lastImmolateAppliedAt + 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Immolate");
             return MacroTypes.IMMOLATE, 0
         end
 
         -- Check if focus target has Shadow Mastery
         if not UnitDebuff("focustarget", "Shadow Mastery") then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Shadow Bolt (no Shadow Mastery)");
             return MacroTypes.SHADOW_BOLT, 0
         end
 
         -- Check for Corruption on focus
         if not UnitDebuff("focustarget", "Corruption") then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Corruption");
             return MacroTypes.CORRUPTION, 0
         end
         
         -- Check for Metamorphosis cooldown
         local start, duration, enabled, modRate = GetSpellCooldown("Metamorphosis")
         if start <= 0.1 then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Metamorphosis");
             return MacroTypes.METAMORPHOSIS, 0
         end
 
         -- Check for Immolation Aura cooldown
         local start, duration, enabled, modRate = GetSpellCooldown("Immolation Aura")
-        if start <= 0.1 then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Immolation Aura");
+        if start <= 0.1 and UnitBuff("player", "Metamorphosis") then
             return MacroTypes.IMMOLATION_AURA, 0
         end
 
         -- Check for Decimation buff
         if UnitBuff("player", "Decimation") then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Soul Fire (Decimation buff)");
             return MacroTypes.SOUL_FIRE, 0
         end
 
         -- Check for Molten Core buff
         if UnitBuff("player", "Molten Core") then
-            DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Incinerate (Molten Core buff)");
             return MacroTypes.INCINERATE, 0
         end
         
         -- Fallback to Shadow Bolt
-        DEFAULT_CHAT_FRAME:AddMessage("DEMONOLOGY WARLOCK: Casting Shadow Bolt (fallback)");
         return MacroTypes.SHADOW_BOLT, 0
     end
 

@@ -26,7 +26,7 @@ local macroMap = {
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
-local lastVampiricTouchAppliedAt = nil
+local lastVampiricTouchAppliedAt = 0
 
 -- Used to debounce Vampiric Touch applications
 local function onUnitSpellcastStart(self, event, unitTarget, spellName, spellRank)
