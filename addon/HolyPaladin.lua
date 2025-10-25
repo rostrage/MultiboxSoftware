@@ -2,14 +2,16 @@
 local MacroTypes = {
     DOING_NOTHING = 0,
     BEACON_OF_LIGHT = 1,
-    DIVINE_PLEA = 2,
-    JUDGEMENT_OF_LIGHT = 3,
-    HOLY_LIGHT = 4
+    SACRED_SHIELD = 2,
+    DIVINE_PLEA = 3,
+    JUDGEMENT_OF_LIGHT = 4,
+    HOLY_LIGHT = 5
 }
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
     [MacroTypes.BEACON_OF_LIGHT] = "/cast [target=focus] Beacon of Light",
+    [MacroTypes.SACRED_SHIELD] = "/cast [target=focus] Sacred Shield",
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
@@ -20,13 +22,7 @@ local macroMap = {
 local function getHolyPaladinMacro()
     local focusName, _ = UnitName("focus")
 
-    -- 1. Cast Beacon of Light if not already on focus
-    if not UnitBuff("focus", "Beacon of Light") then
-        DEFAULT_CHAT_FRAME:AddMessage("BEACON OF LIGHT");
-        return MacroTypes.BEACON_OF_LIGHT, 0
-    end
-
-    -- 2. Use Divine Plea when mana is low and off cooldown
+    -- 1. Use Divine Plea when mana is low and off cooldown
     local currentMana = UnitPower("player", 0)
     local maxMana = UnitPowerMax("player", 0)
     if currentMana < maxMana * 0.75 then
@@ -37,14 +33,30 @@ local function getHolyPaladinMacro()
         end
     end
 
-    -- 3. Cast Judgement of Light on focustarget when off cooldown
+    if not UnitAffectingCombat("player")  then
+        return MacroTypes.DOING_NOTHING, 0
+    end
+    
+    -- 2. Cast Beacon of Light if not already on focus
+    if not UnitBuff("focus", "Beacon of Light") then
+        DEFAULT_CHAT_FRAME:AddMessage("BEACON OF LIGHT");
+        return MacroTypes.BEACON_OF_LIGHT, 0
+    end
+
+    -- 3. Cast Sacred Shield if not already on focus
+    if not UnitBuff("focus", "Sacred Shield") then
+        DEFAULT_CHAT_FRAME:AddMessage("SACRED SHIELD");
+        return MacroTypes.SACRED_SHIELD, 0
+    end
+
+    -- 4. Cast Judgement of Light on focustarget when off cooldown
     local startJ, durationJ = GetSpellCooldown("Judgement of Light")
-    if startJ == 0 and UnitAffectingCombat("player") then
+    if startJ == 0 then
         DEFAULT_CHAT_FRAME:AddMessage("JUDGEMENT OF LIGHT");
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
 
-    -- 4. Loop through raid members and find lowest HP non-focus target
+    -- 5. Loop through raid members and find lowest HP non-focus target
     local targetIndex = 0
     local lowestPercent = 1.0
 
@@ -84,10 +96,11 @@ end
 local function initHolyPaladinKeybinds()
     local macroKeys = {
         [MacroTypes.BEACON_OF_LIGHT] = "F1",
-        [MacroTypes.DIVINE_PLEA] = "F2",
-        [MacroTypes.JUDGEMENT_OF_LIGHT] = "F3",
-        [MacroTypes.HOLY_LIGHT] = "F4",
-        [MacroTypes.DOING_NOTHING] = "F5"
+        [MacroTypes.SACRED_SHIELD] = "F2",
+        [MacroTypes.DIVINE_PLEA] = "F3",
+        [MacroTypes.JUDGEMENT_OF_LIGHT] = "F4",
+        [MacroTypes.HOLY_LIGHT] = "F5",
+        [MacroTypes.DOING_NOTHING] = "F6"
     }
 
     for key, binding in pairs(macroKeys) do
