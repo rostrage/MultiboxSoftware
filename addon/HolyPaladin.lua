@@ -12,7 +12,7 @@ local macroMap = {
     [MacroTypes.BEACON_OF_LIGHT] = "/cast [target=focus] Beacon of Light",
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
-    [MacroTypes.HOLY_LIGHT] = "/cast [target=raidX] Holy Light", -- Dynamic target will be handled at runtime
+    [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
@@ -22,6 +22,7 @@ local function getHolyPaladinMacro()
 
     -- 1. Cast Beacon of Light if not already on focus
     if not UnitBuff("focus", "Beacon of Light") then
+        DEFAULT_CHAT_FRAME:AddMessage("BEACON OF LIGHT");
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
 
@@ -31,13 +32,15 @@ local function getHolyPaladinMacro()
     if currentMana < maxMana * 0.75 then
         local start, duration = GetSpellCooldown("Divine Plea")
         if start == 0 then
+            DEFAULT_CHAT_FRAME:AddMessage("DIVINE PLEA");
             return MacroTypes.DIVINE_PLEA, 0
         end
     end
 
     -- 3. Cast Judgement of Light on focustarget when off cooldown
     local startJ, durationJ = GetSpellCooldown("Judgement of Light")
-    if startJ == 0 then
+    if startJ == 0 and UnitAffectingCombat("player") then
+        DEFAULT_CHAT_FRAME:AddMessage("JUDGEMENT OF LIGHT");
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
 
@@ -49,13 +52,12 @@ local function getHolyPaladinMacro()
         local unit = "raid" .. i
         if UnitIsPlayer(unit) and UnitInRange(unit) then
             local name = UnitName(unit)
-            if not name == focusName then -- Skip the focus target
-                local health = UnitHealth(unit)
-                local maxHealth = UnitHealthMax(unit)
-                local percent = health / maxHealth
-
-                if percent < lowestPercent then
-                    lowestPercent = percent
+            local health = UnitHealth(unit)
+            local maxHealth = UnitHealthMax(unit)
+            local percent = health / maxHealth
+            if percent < lowestPercent then
+                lowestPercent = percent
+                if not name == focusName then -- Skip the focus target
                     targetIndex = i
                 end
             end
@@ -70,7 +72,8 @@ local function getHolyPaladinMacro()
         local focusMaxHealth = UnitHealthMax("focus")
 
         if focusHealth < focusMaxHealth then
-            return MacroTypes.HOLY_LIGHT, 0
+            DEFAULT_CHAT_FRAME:AddMessage("HOLY LIGHT");
+            return MacroTypes.HOLY_LIGHT, targetIndex
         else
             return MacroTypes.DOING_NOTHING, 0
         end

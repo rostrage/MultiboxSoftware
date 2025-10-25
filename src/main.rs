@@ -63,8 +63,9 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         GetWindowTextW(hwnd, &mut title_buf);
 
         let title_str = String::from_utf16_lossy(&title_buf);
-        // if title_str.starts_with("OMB 3") || title_str.starts_with("OMB 5") {
-        if title_str.starts_with("World of Warcraft") || title_str.starts_with("OMB 2") || title_str.starts_with("OMB 3") || title_str.starts_with("OMB 4"){
+        // if title_str.starts_with("OMB 2") {
+        if title_str.starts_with("OMB ")  && !title_str.starts_with("OMB 1"){
+        // if title_str.starts_with("World of Warcraft") || title_str.starts_with("OMB 3") || title_str.starts_with("OMB 4") || title_str.starts_with("OMB 5") || title_str.starts_with("OMB 6"){
             HWNDS.push(hwnd);
         }
     }

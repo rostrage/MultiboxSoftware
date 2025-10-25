@@ -57,8 +57,8 @@ local function getShadowPriestMacro()
     end
 
     -- Check if any buffs are missing
-    if not UnitBuff("player", "Divine Spirit") or 
-       not UnitBuff("player", "Power Word: Fortitude") or 
+    if not (UnitBuff("player", "Divine Spirit") or UnitBuff("player", "Prayer of Spirit")) or 
+       not (UnitBuff("player", "Power Word: Fortitude") or UnitBuff("player", "Prayer of Fortitude")) or 
        not UnitBuff("player", "Shadowform") or 
        not UnitBuff("player", "Vampiric Embrace") or 
        not UnitBuff("player", "Inner Fire") then
