@@ -18,43 +18,68 @@ local macroMap = {
     [MacroTypes.DOING_NOTHING] = "/stopcasting"
 }
 
+-- ========= DEBUG FLAG =========
+local isDebug = true
+local function debug(msg)
+    if isDebug then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[HolyPaladin]|r " .. msg)
+    end
+end
+-- ============================
+
+local function getSpellCooldownRemaining(spellName)
+    local startTime, duration, _ = GetSpellCooldown(spellName)
+    if startTime and startTime > 0 then
+        local remaining = (startTime + duration) - GetTime()
+        return remaining > 0 and remaining or 0
+    end
+    return 0
+end
+
 -- Function to return a tuple (key, target) based on current conditions
 local function getHolyPaladinMacro()
+    
     local focusName, _ = UnitName("focus")
 
     -- 1. Use Divine Plea when mana is low and off cooldown
     local currentMana = UnitPower("player", 0)
     local maxMana = UnitPowerMax("player", 0)
     if currentMana < maxMana * 0.75 then
-        local start, duration = GetSpellCooldown("Divine Plea")
-        if start == 0 then
-            DEFAULT_CHAT_FRAME:AddMessage("DIVINE PLEA");
+        local divinePleaCooldown = getSpellCooldownRemaining("Divine Plea")
+        if divinePleaCooldown <= 0.2 then
+            debug("ACTION: Divine Plea. (Available)")
             return MacroTypes.DIVINE_PLEA, 0
         end
+        debug(string.format("Condition: Divine Plea CD=%.1f, Mana=%.1f%%", divinePleaCooldown, (currentMana / maxMana) * 100))
     end
 
     if not UnitAffectingCombat("focus")  then
         return MacroTypes.DOING_NOTHING, 0
     end
+    
+    debug("---------- New Rotation Tick ----------")
 
     -- 2. Cast Beacon of Light if not already on focus
     if not UnitBuff("focus", "Beacon of Light") then
-        DEFAULT_CHAT_FRAME:AddMessage("BEACON OF LIGHT");
+        debug("ACTION: Beacon of Light. (Not on focus)")
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
+    debug("Condition: Beacon of Light is on focus.")
 
     -- 3. Cast Sacred Shield if not already on focus
     if not UnitBuff("focus", "Sacred Shield") then
-        DEFAULT_CHAT_FRAME:AddMessage("SACRED SHIELD");
+        debug("ACTION: Sacred Shield. (Not on focus)")
         return MacroTypes.SACRED_SHIELD, 0
     end
+    debug("Condition: Sacred Shield is on focus.")
 
     -- 4. Cast Judgement of Light on focustarget when off cooldown
-    local startJ, durationJ = GetSpellCooldown("Judgement of Light")
-    if startJ == 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("JUDGEMENT OF LIGHT");
+    local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
+    if judgementCooldown <= 0.2 then
+        debug("ACTION: Judgement of Light. (Available)")
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
+    debug(string.format("Condition: Judgement of Light CD=%.1f", judgementCooldown))
 
     -- 5. Loop through raid members and find lowest HP non-focus target
     local targetIndex = 0
@@ -77,16 +102,19 @@ local function getHolyPaladinMacro()
     end
 
     if lowestPercent < 1.0 then
+        debug(string.format("ACTION: Holy Light. (Target %d at %.1f%% health)", targetIndex, lowestPercent * 100))
         return MacroTypes.HOLY_LIGHT, targetIndex
     else
         -- No raid members in need; check focus now (focus is last priority)
         local focusHealth = UnitHealth("focus")
         local focusMaxHealth = UnitHealthMax("focus")
+        local focusPercent = (focusHealth / focusMaxHealth) * 100
 
         if focusHealth < focusMaxHealth then
-            DEFAULT_CHAT_FRAME:AddMessage("HOLY LIGHT");
+            debug(string.format("ACTION: Holy Light. (Focus at %.1f%% health)", focusPercent))
             return MacroTypes.HOLY_LIGHT, targetIndex
         else
+            debug("ACTION: Doing nothing. (No targets need healing)")
             return MacroTypes.DOING_NOTHING, 0
         end
     end
