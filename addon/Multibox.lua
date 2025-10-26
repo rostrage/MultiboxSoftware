@@ -73,6 +73,7 @@ end
 function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
 
 end
+local CURRENT_SPEC = "Unsupported"
 local function init(msg, editBox)
     initTargettingKeybinds();
     MultiboxGuildBank:Initialize()
@@ -86,23 +87,27 @@ local function init(msg, editBox)
             DEFAULT_CHAT_FRAME:AddMessage("INIT RETRI PALADIN");
             RetriPaladin.initRetriPaladinKeybinds();
             getNextMacro = RetriPaladin.getRetriPaladinMacro;
+            CURRENT_SPEC = "Retribution Paladin"
         end
         _, _, _, _, currentRank = GetTalentInfo(1, 26)
         if currentRank == 1 then
             DEFAULT_CHAT_FRAME:AddMessage("INIT HOLY PALADIN");
             HolyPaladin.initHolyPaladinKeybinds();
             getNextMacro = HolyPaladin.getHolyPaladinMacro;
+            CURRENT_SPEC = "Holy Paladin"
         end
     elseif playerClass == "Shaman" then
         DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
         RestoShaman.initRestoShamanKeybinds();
         getNextMacro = RestoShaman.getRestoShamanMacro;
+        CURRENT_SPEC = "Restoration Shaman"
     elseif playerClass == "Druid" then
         _, _, _, _, currentRank = GetTalentInfo(1, 28);
         if currentRank == 1 then
             DEFAULT_CHAT_FRAME:AddMessage("INIT BALANCE DRUID");
             BalanceDruid.initBalanceDruidKeybinds();
             getNextMacro = BalanceDruid.getBalanceDruidMacro;
+            CURRENT_SPEC = "Balance Druid"
         end
         -- -- Feral cat - Feral Aggression rank 5
         _, _, _, _, currentRank = GetTalentInfo(2, 2);
@@ -110,6 +115,7 @@ local function init(msg, editBox)
             DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL CAT DRUID");
             FeralCatDruid.initFeralCatDruidKeybinds();
             getNextMacro = FeralCatDruid.getFeralCatDruidMacro;
+            CURRENT_SPEC = "Feral (Cat) Druid"
         end
         -- Feral bear - Thick Hide rank 3
         _, _, _, _, currentRank = GetTalentInfo(2, 5);
@@ -117,12 +123,14 @@ local function init(msg, editBox)
             DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL BEAR DRUID");
             FeralBearDruid.initFeralBearDruidKeybinds();
             getNextMacro = FeralBearDruid.getFeralBearDruidMacro;
+            CURRENT_SPEC = "Feral (Bear) Druid"
         end
         -- _, _, _, _, currentRank = GetTalentInfo(3, 27);
         -- if currentRank == 1 then
         --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
         --     RestoDruid.initRestoDruidKeybinds();
         --     getNextMacro = RestoDruid.getRestoDruidMacro;
+        --     CURRENT_SPEC = "Restoration Druid"
         -- end
     elseif playerClass == "Priest" then
         _, _, _, _, currentRank = GetTalentInfo(3, 27);
@@ -130,6 +138,7 @@ local function init(msg, editBox)
             DEFAULT_CHAT_FRAME:AddMessage("INIT SHADOW PRIEST");
             ShadowPriest.initShadowPriestKeybinds();
             getNextMacro = ShadowPriest.getShadowPriestMacro;
+            CURRENT_SPEC = "Shadow Priest"
         end
     elseif playerClass == "Warlock" then
         _, _, _, _, currentRank = GetTalentInfo(2, 27);
@@ -137,9 +146,11 @@ local function init(msg, editBox)
             DEFAULT_CHAT_FRAME:AddMessage("INIT DEMONOLOGY WARLOCK");
             DemonologyWarlock.initDemonologyWarlockKeybinds();
             getNextMacro = DemonologyWarlock.getDemonologyWarlockMacro;
+            CURRENT_SPEC = "Demonology Warlock"
         end
     else
         DEFAULT_CHAT_FRAME:AddMessage("CLASS NOT SUPPORTED");
     end
+    MultiboxConfig:UpdateSpecStatus(CURRENT_SPEC)
 end
 SlashCmdList["MBOX"] = init; -- Also a valid assignment strategy
