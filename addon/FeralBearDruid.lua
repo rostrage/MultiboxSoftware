@@ -32,49 +32,90 @@ local macroMap = {
     [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
 }
 
+-- ========= DEBUG FLAG =========
+local isDebug = true
+local function debug(msg)
+    if isDebug then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[FeralBearDruid]|r " .. msg)
+    end
+end
+-- ============================
+
+local function getSpellCooldownRemaining(spellName)
+    local startTime, duration, _ = GetSpellCooldown(spellName)
+    if startTime and startTime > 0 then
+        local remaining = (startTime + duration) - GetTime()
+        return remaining > 0 and remaining or 0
+    end
+    return 0
+end
+
 -- Function to return a tuple (key, target) based on current conditions
 local function getFeralBearDruidMacro()
+    debug("---------- New Rotation Tick ----------")
     if not UnitAffectingCombat("player") or IsMounted() then
+        debug("Player not in combat or is mounted. Doing nothing.")
         return MacroTypes.DOING_NOTHING, 0
     end
     
     -- Check if focustarget exists
     if not UnitExists("focustarget") then
+        debug("Focus target does not exist. Doing nothing.")
         return MacroTypes.DOING_NOTHING, 0
     end
     
+    debug("Player in combat, not mounted, and focustarget exists. Evaluating rotation.")
+
     -- 1. If the focustarget does not have the Faerie Fire (Feral) debuff, return Faerie Fire (Feral)
     if not UnitDebuff("focustarget", "Faerie Fire (Feral)") then
+        debug("ACTION: Faerie Fire (Feral). (Debuff not on target)")
         return MacroTypes.FAERIE_FIRE_FERAL, 0
     end
+    debug("Condition: Faerie Fire is on target.")
     
     -- 2. If Enrage is available, return Enrage
-    local enrageStart, enrageDuration, enrageEnabled, enrageModRate = GetSpellCooldown("Enrage")
-    if enrageStart <= 0.1 and not UnitBuff("player", "Enrage") then
+    local enrageStart, enrageDuration = getSpellCooldownRemaining("Enrage")
+    if enrageStart <= 0.1 then
+        debug("ACTION: Enrage. (Available)")
         return MacroTypes.ENRAGE, 0
     end
+    debug(string.format("Condition: Enrage CD=%.1f", enrageStart))
     
     -- 3. If the Mangle (Bear) is available, return Mangle (Bear)
-    local start, duration, enabled, modRate = GetSpellCooldown("Mangle (Bear)")
-    if start <= 0.1 then
+    local start, duration = getSpellCooldownRemaining("Mangle (Bear)")
+    if start <= 0.1 and not UnitBuff("player", "Enrage") then
+        debug("ACTION: Mangle (Bear). (Available)")
         return MacroTypes.MANGLE_BEAR, 0
     end
-
+    debug(string.format("Condition: Mangle CD=%.1f", start))
     
     -- 4. If the focustarget does not have 5 stacks of Lacerate, return Lacerate
-    local _, _, _, lacerateStacks = UnitDebuff("focustarget", "Lacerate")
-    if lacerateStacks < 5 then
+    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitDebuff("focustarget", "Lacerate")
+    local lacerateRemains = (lacerateExpirationTime or 0) - GetTime()
+    if (lacerateStacks or 0) < 5 or lacerateRemains <= 5.0 then
+        debug(string.format("ACTION: Lacerate. (Stacks=%d, Duration=%.1f)", lacerateStacks or 0, lacerateRemains or 0))
         return MacroTypes.LACERATE, 0
     end
-
+    debug(string.format("Condition: Lacerate has %d stacks with %.1f duration.", lacerateStacks or 0, lacerateRemains or 0))
         
     -- 5. If Berserk is available, return Berserk
-    local berserkStart, berserkDuration, berserkEnabled, berserkModRate = GetSpellCooldown("Berserk")
+    local berserkStart, berserkDuration = getSpellCooldownRemaining("Berserk")
     if berserkStart <= 0.1 then
+        debug("ACTION: Berserk. (Available)")
         return MacroTypes.BERSERK, 0
     end
+    debug(string.format("Condition: Berserk CD=%.1f", berserkStart))
 
-    -- 6. Otherwise return Swipe (Bear)
+    -- 6. If Faerie Fire (Feral) is off cooldown, use it (low priority filler)
+    local ffStart, ffDuration = getSpellCooldownRemaining("Faerie Fire (Feral)")
+    if ffStart <= 0.1 then
+        debug("ACTION: Faerie Fire (Feral). (Off cooldown, low priority filler)")
+        return MacroTypes.FAERIE_FIRE_FERAL, 0
+    end
+    debug(string.format("Condition: Faerie Fire (Feral) CD=%.1f", ffStart))
+
+    -- 7. Otherwise return Swipe (Bear)
+    debug("ACTION: Swipe (Bear). (Filler)")
     return MacroTypes.SWIPE_BEAR, 0
 end
 
