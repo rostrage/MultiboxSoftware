@@ -8,6 +8,7 @@ local MacroTypes = {
     STARFALL = 5,
     STARFIRE = 6,
     WRATH = 7,
+    MOONKIN_FORM = 8,
 }
 
 -- Map of macro strings for each action
@@ -21,6 +22,7 @@ local macroMap = {
 /cast [target=focustarget] Starfire]],
     [MacroTypes.WRATH] = "/cast [target=focustarget] Wrath",
     [MacroTypes.DOING_NOTHING] = "/stopcasting",
+    [MacroTypes.MOONKIN_FORM] = "/cast Moonkin Form",
 }
 
 -- Track Lunar Eclipse state and cooldown timings
@@ -99,8 +101,12 @@ local function getBalanceDruidMacro()
     end
 
     -- 2) If not in combat or no valid focus target, do nothing
-    if not UnitAffectingCombat("player") then
+    if not UnitAffectingCombat("focus") then
         return MacroTypes.DOING_NOTHING, 0
+    end
+
+    if not UnitBuff("player", "Moonkin Form") then
+        return MacroTypes.MOONKIN_FORM, 0
     end
 
     local focusName, _ = UnitName("focustarget")
@@ -149,6 +155,7 @@ local function initBalanceDruidKeybinds()
         [MacroTypes.STARFALL] = "F5",
         [MacroTypes.STARFIRE] = "F6",
         [MacroTypes.WRATH] = "F7",
+        [MacroTypes.MOONKIN_FORM] = "F8",
     }
 
     for key, binding in pairs(macroKeys) do
