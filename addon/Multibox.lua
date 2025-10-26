@@ -102,12 +102,12 @@ local function init(msg, editBox)
             getNextMacro = BalanceDruid.getBalanceDruidMacro;
         end
         -- -- Feral cat - Feral Aggression rank 5
-        -- _, _, _, _, currentRank = GetTalentInfo(2, 2);
-        -- if currentRank == 5 then
-        --     DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL CAT DRUID");
-        --     FeralDruid.initFeralDruidKeybinds();
-        --     getNextMacro = FeralDruid.getFeralDruidMacro;
-        -- end
+        _, _, _, _, currentRank = GetTalentInfo(2, 2);
+        if currentRank == 5 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT FERAL CAT DRUID");
+            FeralCatDruid.initFeralCatDruidKeybinds();
+            getNextMacro = FeralCatDruid.getFeralCatDruidMacro;
+        end
         -- Feral bear - Thick Hide rank 3
         _, _, _, _, currentRank = GetTalentInfo(2, 5);
         if currentRank == 3 then
