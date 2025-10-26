@@ -52,20 +52,17 @@ end
 
 -- Function to return a tuple (key, target) based on current conditions
 local function getFeralBearDruidMacro()
-    debug("---------- New Rotation Tick ----------")
+
     if not UnitAffectingCombat("player") or IsMounted() then
-        debug("Player not in combat or is mounted. Doing nothing.")
         return MacroTypes.DOING_NOTHING, 0
     end
-    
+
     -- Check if focustarget exists
     if not UnitExists("focustarget") then
-        debug("Focus target does not exist. Doing nothing.")
         return MacroTypes.DOING_NOTHING, 0
     end
     
-    debug("Player in combat, not mounted, and focustarget exists. Evaluating rotation.")
-
+    debug("---------- New Rotation Tick ----------")    
     -- 1. If the focustarget does not have the Faerie Fire (Feral) debuff, return Faerie Fire (Feral)
     if not UnitDebuff("focustarget", "Faerie Fire (Feral)") then
         debug("ACTION: Faerie Fire (Feral). (Debuff not on target)")

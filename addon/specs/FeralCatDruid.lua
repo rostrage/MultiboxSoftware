@@ -70,7 +70,6 @@ end
 local function getFeralCatDruidMacro()
     
     if UnitIsDeadOrGhost("player") or IsMounted() or not UnitAffectingCombat("player") then
-        debug("Player is dead, mounted, or not in combat. Doing nothing.")
         return MacroTypes.DOING_NOTHING, 0
     end
 
