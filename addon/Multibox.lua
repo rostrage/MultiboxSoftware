@@ -71,7 +71,8 @@ local function initTargettingKeybinds()
 end
 
 function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
-
+    -- Initialize configuration system
+    MultiboxConfig:RegisterOptions()
 end
 local CURRENT_SPEC = "Unsupported"
 local function init(msg, editBox)
@@ -80,6 +81,10 @@ local function init(msg, editBox)
     MultiboxFollow:Initialize()
     MultiboxParty:Initialize()
     MultiboxQuest:Initialize()
+    
+    -- Initialize configuration system
+    MultiboxConfig:RegisterOptions()
+    
     local playerClass = UnitClass("player");
     if playerClass == "Paladin" then
         _, _, _, _, currentRank = GetTalentInfo(3, 26)
@@ -88,6 +93,10 @@ local function init(msg, editBox)
             RetriPaladin.initRetriPaladinKeybinds();
             getNextMacro = RetriPaladin.getRetriPaladinMacro;
             CURRENT_SPEC = "Retribution Paladin"
+            
+            -- Initialize Retribution Paladin configuration
+            RetriPaladinDB = RetriPaladinDB or { judgmentType = "light" }
+            RetriPaladin:UpdateJudgmentMacro()
         end
         _, _, _, _, currentRank = GetTalentInfo(1, 26)
         if currentRank == 1 then

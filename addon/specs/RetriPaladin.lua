@@ -1,7 +1,10 @@
+RetriPaladin = {}
+
+local buttonFrames = {}
 -- Define named constants for macro types (simulating enums)
 local MacroTypes = {
     DOING_NOTHING = 0,
-    JUDGEMENT_OF_LIGHT = 1,
+    JUDGEMENT = 1,
     DIVINE_STORM = 2,
     CRUSADER_STRIKE = 3,
     HAMMER_OF_WRATH = 4,
@@ -11,9 +14,14 @@ local MacroTypes = {
     AVENGING_WRATH = 8
 }
 
+-- Configuration storage
+RetriPaladinDB = RetriPaladinDB or {
+    judgmentType = "light" -- Default to Judgment of Light
+}
+
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
-    [MacroTypes.JUDGEMENT_OF_LIGHT] = [[/use 10;
+    [MacroTypes.JUDGEMENT] = [[/use 10;
 /cast [target=focustarget] Judgement of Light]],
     [MacroTypes.DIVINE_STORM] = [[/use 10;
 /cast [target=focustarget] Divine Storm]],
@@ -65,10 +73,11 @@ local function getRetriPaladinMacro()
     -- 1. Judgement of Light
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
     if judgementCooldown <= 0.2 then
-        debug("ACTION: Judgement of Light. (Available)")
-        return MacroTypes.JUDGEMENT_OF_LIGHT, 0
+        debug("ACTION: Judgement. (Available)")
+        debug(macroMap[MacroTypes.JUDGEMENT])
+        return MacroTypes.JUDGEMENT, 0
     end
-    debug(string.format("Condition: Judgement of Light CD=%.1f", judgementCooldown))
+    debug(string.format("Condition: Judgement CD=%.1f", judgementCooldown))
     
     -- 2. Avenging Wrath
     local avengingWrathCooldown = getSpellCooldownRemaining("Avenging Wrath")
@@ -140,7 +149,7 @@ end
 -- Initialize keybinds for macros in macroMap using secure buttons and SetBindingClick
 local function initRetriPaladinKeybinds()
     local macroKeys = {
-        [MacroTypes.JUDGEMENT_OF_LIGHT] = "F1",
+        [MacroTypes.JUDGEMENT] = "F1",
         [MacroTypes.DIVINE_STORM] = "F2",
         [MacroTypes.CRUSADER_STRIKE] = "F3",
         [MacroTypes.HAMMER_OF_WRATH] = "F4",
@@ -162,13 +171,109 @@ local function initRetriPaladinKeybinds()
 
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
+        buttonFrames[buttonName] = button
     end
 end
+
+-- Configuration functions for AceConfig
+local function GetJudgmentType()
+    return RetriPaladinDB.judgmentType
+end
+
+local function SetJudgmentType(info, value)
+    RetriPaladinDB.judgmentType = value
+    RetriPaladin:UpdateJudgmentMacro()
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[RetriPaladin]|r Judgment type changed to: " .. (value == "wisdom" and "Judgment of Wisdom" or "Judgment of Light"))
+end
+
+-- Reinitialize keybinds (called when configuration changes)
+local function ReinitializeKeybinds()
+    -- Clear existing bindings
+    local macroKeys = {
+        [MacroTypes.JUDGEMENT] = "F1",
+        [MacroTypes.DIVINE_STORM] = "F2",
+        [MacroTypes.CRUSADER_STRIKE] = "F3",
+        [MacroTypes.HAMMER_OF_WRATH] = "F4",
+        [MacroTypes.CONSECRATION] = "F5",
+        [MacroTypes.EXORCISM] = "F6",
+        [MacroTypes.DIVINE_PLEA] = "F7",
+        [MacroTypes.AVENGING_WRATH] = "F8",
+        [MacroTypes.DOING_NOTHING] = "F9",
+    }
+
+    -- Clear existing buttons and bindings
+    for key, binding in pairs(macroKeys) do
+        local buttonName = "MacroButton_" .. binding
+        local button = buttonFrames[buttonName]
+        if button then
+            debug("Reinitializing keybind for " .. binding)
+            button:SetAttribute("macrotext", macroMap[key])
+        end
+        SetBindingClick(binding, buttonName)
+    end
+end
+
+-- Update the macroMap and keybinds when judgment type changes
+local function UpdateJudgmentMacro()
+    -- Update macroMap based on current judgment type
+    local judgmentSpell = RetriPaladinDB.judgmentType == "wisdom" and "Judgement of Wisdom" or "Judgement of Light"
+    
+    macroMap[MacroTypes.JUDGEMENT] = string.format([[/use 10;
+/cast [target=focustarget] %s]], judgmentSpell)
+    
+    -- Re-initialize keybinds to apply changes
+    RetriPaladin:ReinitializeKeybinds()
+end
+
+-- Check if player is Retribution Paladin spec
+local function IsRetributionSpec()
+    local playerClass = UnitClass("player")
+    if playerClass ~= "Paladin" then return false end
+    
+    local _, _, _, _, currentRank = GetTalentInfo(3, 26)
+    return currentRank == 1
+end
+
+-- AceConfig options table
+RetriPaladinOptions = {
+    type = "group",
+    name = "Retribution Paladin",
+    handler = RetriPaladin,
+    args = {
+        judgmentType = {
+            type = "select",
+            name = "Judgment Type",
+            desc = "Choose which judgment to use in rotation",
+            values = {
+                ["light"] = "Judgment of Light",
+                ["wisdom"] = "Judgment of Wisdom"
+            },
+            get = GetJudgmentType,
+            set = SetJudgmentType,
+            order = 1,
+            hidden = function() return not IsRetributionSpec() end
+        },
+        specStatus = {
+            type = "description",
+            name = function()
+                return IsRetributionSpec() and
+                    "|cff00ff00You are a Retribution Paladin|r" or
+                    "|cffff0000You are not a Retribution Paladin|r"
+            end,
+            order = 2,
+            fontSize = "medium"
+        }
+    }
+}
 
 -- Return module exports
 RetriPaladin = {
     MacroTypes = MacroTypes,
     macroMap = macroMap,
     getRetriPaladinMacro = getRetriPaladinMacro,
-    initRetriPaladinKeybinds = initRetriPaladinKeybinds
+    initRetriPaladinKeybinds = initRetriPaladinKeybinds,
+    UpdateJudgmentMacro = UpdateJudgmentMacro,
+    ReinitializeKeybinds = ReinitializeKeybinds,
+    IsRetributionSpec = IsRetributionSpec,
+    Options = RetriPaladinOptions
 }
