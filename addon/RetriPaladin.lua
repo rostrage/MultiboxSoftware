@@ -33,7 +33,7 @@ local macroMap = {
 
 -- Function to return a tuple (key, target) based on current conditions
 local function getRetriPaladinMacro()
-    if not UnitAffectingCombat("player") or IsMounted()  then
+    if not UnitAffectingCombat("focus") or IsMounted()  then
         return MacroTypes.DOING_NOTHING, 0
     end
     local startJ, durationJ = GetSpellCooldown("Judgement of Light")

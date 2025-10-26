@@ -65,7 +65,7 @@ local function getShadowPriestMacro()
         return MacroTypes.BUFF_SEQUENCE, 0
     end
 
-    if not UnitAffectingCombat("player") then
+    if not UnitAffectingCombat("focus") then
         return MacroTypes.DOING_NOTHING, 0
     end
 

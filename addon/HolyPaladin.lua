@@ -33,10 +33,10 @@ local function getHolyPaladinMacro()
         end
     end
 
-    if not UnitAffectingCombat("player")  then
+    if not UnitAffectingCombat("focus")  then
         return MacroTypes.DOING_NOTHING, 0
     end
-    
+
     -- 2. Cast Beacon of Light if not already on focus
     if not UnitBuff("focus", "Beacon of Light") then
         DEFAULT_CHAT_FRAME:AddMessage("BEACON OF LIGHT");
