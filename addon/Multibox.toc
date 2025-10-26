@@ -4,12 +4,12 @@
 ## Author: Test
 ## Notes: Nothing
 
-BalanceDruid.lua
-DemonologyWarlock.lua
-FeralBearDruid.lua
-FeralCatDruid.lua
-RestoShaman.lua
-RetriPaladin.lua
-HolyPaladin.lua
-ShadowPriest.lua
+specs\BalanceDruid.lua
+specs\DemonologyWarlock.lua
+specs\FeralBearDruid.lua
+specs\FeralCatDruid.lua
+specs\RestoShaman.lua
+specs\RetriPaladin.lua
+specs\HolyPaladin.lua
+specs\ShadowPriest.lua
 Multibox.lua
