@@ -40,6 +40,10 @@ local function getRestoShamanMacro()
         return MacroTypes.EARTH_SHIELD_FOCUS, 0
     end
 
+    if not UnitAffectingCombat("focus") then
+        return MacroTypes.DOING_NOTHING, 0
+    end
+
     local numtargets = 0
     local target = 0
     local targetPercent = 0.95
