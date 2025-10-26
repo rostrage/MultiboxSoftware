@@ -12,4 +12,8 @@ specs\RestoShaman.lua
 specs\RetriPaladin.lua
 specs\HolyPaladin.lua
 specs\ShadowPriest.lua
+Follow.lua
+Guildbank.lua
+Party.lua
+Quest.lua
 Multibox.lua

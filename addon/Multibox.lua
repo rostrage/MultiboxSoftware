@@ -27,7 +27,6 @@ frame:HookScript("OnUpdate", function(self, elapsed)
         -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
         local r = key / 255
         local g = target / 255
-        -- DEFAULT_CHAT_FRAME:AddMessage(target);
         drawPixel(r, g, 0)
     end
 end)
@@ -76,6 +75,10 @@ function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
 end
 local function init(msg, editBox)
     initTargettingKeybinds();
+    MultiboxGuildBank:Initialize()
+    MultiboxFollow:Initialize()
+    MultiboxParty:Initialize()
+    MultiboxQuest:Initialize()
     local playerClass = UnitClass("player");
     if playerClass == "Paladin" then
         _, _, _, _, currentRank = GetTalentInfo(3, 26)
