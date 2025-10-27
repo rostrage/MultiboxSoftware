@@ -15,6 +15,7 @@ specs\BalanceDruid.lua
 specs\DemonologyWarlock.lua
 specs\FeralBearDruid.lua
 specs\FeralCatDruid.lua
+specs\RestoDruid.lua
 specs\RestoShaman.lua
 specs\RetriPaladin.lua
 specs\HolyPaladin.lua

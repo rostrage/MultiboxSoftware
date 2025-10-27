@@ -134,13 +134,13 @@ local function init(msg, editBox)
             getNextMacro = FeralBearDruid.getFeralBearDruidMacro;
             CURRENT_SPEC = "Feral (Bear) Druid"
         end
-        -- _, _, _, _, currentRank = GetTalentInfo(3, 27);
-        -- if currentRank == 1 then
-        --     DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
-        --     RestoDruid.initRestoDruidKeybinds();
-        --     getNextMacro = RestoDruid.getRestoDruidMacro;
-        --     CURRENT_SPEC = "Restoration Druid"
-        -- end
+        _, _, _, _, currentRank = GetTalentInfo(3, 27);
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO DRUID");
+            RestoDruid.initRestoDruidKeybinds();
+            getNextMacro = RestoDruid.getRestoDruidMacro;
+            CURRENT_SPEC = "Restoration Druid"
+        end
     elseif playerClass == "Priest" then
         _, _, _, _, currentRank = GetTalentInfo(3, 27);
         if currentRank == 1 then
