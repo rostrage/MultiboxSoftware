@@ -53,7 +53,7 @@ end
 -- Function to return a tuple (key, target) based on current conditions
 local function getFeralBearDruidMacro()
 
-    if not UnitAffectingCombat("player") or IsMounted() then
+    if not UnitAffectingCombat("focus") or IsMounted() then
         return MacroTypes.DOING_NOTHING, 0
     end
 
@@ -62,7 +62,9 @@ local function getFeralBearDruidMacro()
         return MacroTypes.DOING_NOTHING, 0
     end
     
-    debug("---------- New Rotation Tick ----------")    
+    debug("---------- New Rotation Tick ----------") 
+    local gcd = getSpellCooldownRemaining("Lacerate")
+   
     -- 1. If the focustarget does not have the Faerie Fire (Feral) debuff, return Faerie Fire (Feral)
     if not UnitDebuff("focustarget", "Faerie Fire (Feral)") then
         debug("ACTION: Faerie Fire (Feral). (Debuff not on target)")
@@ -80,14 +82,14 @@ local function getFeralBearDruidMacro()
     
     -- 3. If the Mangle (Bear) is available, return Mangle (Bear)
     local start, duration = getSpellCooldownRemaining("Mangle (Bear)")
-    if start <= 0.1 and not UnitBuff("player", "Enrage") then
+    if start <= gcd then
         debug("ACTION: Mangle (Bear). (Available)")
         return MacroTypes.MANGLE_BEAR, 0
     end
     debug(string.format("Condition: Mangle CD=%.1f", start))
     
     -- 4. If the focustarget does not have 5 stacks of Lacerate, return Lacerate
-    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitDebuff("focustarget", "Lacerate")
+    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitAura("focustarget", "Lacerate", "PLAYER|HARMFUL")
     local lacerateRemains = (lacerateExpirationTime or 0) - GetTime()
     if (lacerateStacks or 0) < 5 or lacerateRemains <= 5.0 then
         debug(string.format("ACTION: Lacerate. (Stacks=%d, Duration=%.1f)", lacerateStacks or 0, lacerateRemains or 0))
@@ -97,7 +99,7 @@ local function getFeralBearDruidMacro()
         
     -- 5. If Berserk is available, return Berserk
     local berserkStart, berserkDuration = getSpellCooldownRemaining("Berserk")
-    if berserkStart <= 0.1 then
+    if berserkStart <= gcd then
         debug("ACTION: Berserk. (Available)")
         return MacroTypes.BERSERK, 0
     end
@@ -105,7 +107,7 @@ local function getFeralBearDruidMacro()
 
     -- 6. If Faerie Fire (Feral) is off cooldown, use it (low priority filler)
     local ffStart, ffDuration = getSpellCooldownRemaining("Faerie Fire (Feral)")
-    if ffStart <= 0.1 then
+    if ffStart <= gcd then
         debug("ACTION: Faerie Fire (Feral). (Off cooldown, low priority filler)")
         return MacroTypes.FAERIE_FIRE_FERAL, 0
     end
