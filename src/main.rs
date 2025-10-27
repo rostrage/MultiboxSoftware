@@ -64,7 +64,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
 
         let title_str = String::from_utf16_lossy(&title_buf);
         // if title_str.starts_with("OMB 2") {
-        if title_str.starts_with("OMB ")  && !title_str.starts_with("OMB 1"){
+        if title_str.starts_with("OMB ") && !title_str.starts_with("OMB 8") {
         // if title_str.starts_with("World of Warcraft") || title_str.starts_with("OMB 3") || title_str.starts_with("OMB 4") || title_str.starts_with("OMB 5") || title_str.starts_with("OMB 6"){
             HWNDS.push(hwnd);
         }
@@ -167,6 +167,10 @@ fn main() {
 fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>) {
     let hwnd = wrapped.0;
     unsafe {
+        let len = GetWindowTextLengthW(hwnd);
+        let mut title_buf = vec![0u16; (len + 1) as usize];
+        GetWindowTextW(hwnd, &mut title_buf);
+        let title_string = String::from_utf16_lossy(&title_buf);
         loop {
             // Check if the window still exists
             let is_valid: BOOL = IsWindow(Some(hwnd)).into();
@@ -232,7 +236,7 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                         WPARAM(scancode.0.into()),
                         LPARAM(0)
                     );
-                    println!("Sending key {:x}", scancode.0);
+                    println!("Sending key {:x} to window {1}", scancode.0, title_string);
                     sleep(Duration::from_millis(10));
                     PostMessageW(
                         Some(hwnd),
