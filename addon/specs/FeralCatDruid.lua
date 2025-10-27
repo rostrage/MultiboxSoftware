@@ -48,20 +48,25 @@ local function getPlayerBuffDuration(unit, auraName)
 end
 
 local function getDebuffDuration(unit, auraName, isPlayerOnly)
-    local name, _, _, _, _, _, expirationTime, caster = UnitDebuff(unit, auraName)
-    if name then
-        if isPlayerOnly then
-            if caster == "player" then
-                local duration = expirationTime - GetTime()
-                debug(string.format("getDebuffDuration: Found player's '%s' on '%s', duration=%.1f", auraName, unit, duration))
-                return duration
-            end
-        else
+    if(isPlayerOnly == nil) then
+        isPlayerOnly = false
+    end
+    if isPlayerOnly then
+        local name, _, _, _, _, _, expirationTime, caster = UnitAura(unit, auraName, nil, "PLAYER|HARMFUL")
+        if name then
             local duration = expirationTime - GetTime()
-            debug(string.format("getDebuffDuration: Found '%s' on '%s', duration=%.1f", auraName, unit, duration))
+            debug(string.format("getDebuffDuration: Found player's '%s' on '%s', duration=%.1f", auraName, unit, duration))
+            return duration
+        end
+    else
+        local name, _, _, _, _, _, expirationTime, caster = UnitDebuff(unit, auraName)
+        if name then
+            local duration = expirationTime - GetTime()
+            debug(string.format("getDebuffDuration: Found %s's '%s' on '%s', duration=%.1f", caster or "", auraName, unit, duration))
             return duration
         end
     end
+
     debug(string.format("getDebuffDuration: '%s' not found on '%s'", auraName, unit))
     return 0
 end
@@ -69,7 +74,7 @@ end
 -- Function to return a tuple (key, target) based on current conditions
 local function getFeralCatDruidMacro()
     
-    if UnitIsDeadOrGhost("player") or IsMounted() or not UnitAffectingCombat("player") then
+    if UnitIsDeadOrGhost("player") or IsMounted() or not UnitAffectingCombat("focus") then
         return MacroTypes.DOING_NOTHING, 0
     end
 
@@ -96,8 +101,8 @@ local function getFeralCatDruidMacro()
         local roar_remains = getPlayerBuffDuration("player", "Savage Roar")
         local rip_remains = getDebuffDuration("focustarget", "Rip", true)
         local rake_remains = getDebuffDuration("focustarget", "Rake", true)
-        local mangle_remains = getDebuffDuration("focustarget", "Mangle (Cat)", false)
-        local faerie_fire_remains = getDebuffDuration("focustarget", "Faerie Fire (Feral)", false)
+        local mangle_remains = math.max(getDebuffDuration("focustarget", "Mangle (Cat)"), getDebuffDuration("focustarget", "Mangle (Bear)"))
+        local faerie_fire_remains = getDebuffDuration("focustarget", "Faerie Fire (Feral)")
 
         local roar_active = roar_remains > 0
         local rip_active = rip_remains > 0

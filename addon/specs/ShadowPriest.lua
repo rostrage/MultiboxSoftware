@@ -79,17 +79,17 @@ local function getShadowPriestMacro()
         end
         
         -- Check for Vampiric Touch on focus
-        if not UnitDebuff("focustarget", "Vampiric Touch") and GetTime() > lastVampiricTouchAppliedAt + 2 then
+        if not UnitAura("focustarget", "Vampiric Touch", nil, "PLAYER|HARMFUL") and GetTime() > lastVampiricTouchAppliedAt + 2 then
             return MacroTypes.VAMPIRIC_TOUCH, 0
         end
 
         -- Check for Devouring Plague on focus
-        if not UnitDebuff("focustarget", "Devouring Plague") then
+        if not UnitAura("focustarget", "Devouring Plague", nil, "PLAYER|HARMFUL") then
             return MacroTypes.DEVOURING_PLAGUE, 0
         end
 
         -- Check for Shadow Word: Pain on focus
-        if not UnitDebuff("focustarget", "Shadow Word: Pain") then
+        if not UnitAura("focustarget", "Shadow Word: Pain", nil, "PLAYER|HARMFUL") then
             return MacroTypes.SHADOW_WORD_PAIN, 0
         end
         
