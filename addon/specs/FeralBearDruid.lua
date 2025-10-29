@@ -89,7 +89,7 @@ local function getFeralBearDruidMacro()
     debug(string.format("Condition: Mangle CD=%.1f", start))
     
     -- 4. If the focustarget does not have 5 stacks of Lacerate, return Lacerate
-    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitAura("focustarget", "Lacerate", "PLAYER|HARMFUL")
+    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitAura("focustarget", "Lacerate", nil, "PLAYER|HARMFUL")
     local lacerateRemains = (lacerateExpirationTime or 0) - GetTime()
     if (lacerateStacks or 0) < 5 or lacerateRemains <= 5.0 then
         debug(string.format("ACTION: Lacerate. (Stacks=%d, Duration=%.1f)", lacerateStacks or 0, lacerateRemains or 0))
