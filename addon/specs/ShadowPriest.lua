@@ -60,14 +60,12 @@ local function getShadowPriestMacro()
         return MacroTypes.DOING_NOTHING, 0
     end
 
-    debug("---------- New Rotation Tick ----------")
-    -- Use Dispersion if low on mana and not in combat
+    -- Use Dispersion if low on mana
     local currentMana = UnitPower("player", 0)
-    if currentMana and currentMana < 1000 and not UnitAffectingCombat("player") then
+    if currentMana and currentMana < 1000 then
         debug("ACTION: Dispersion. (Low mana: " .. currentMana .. ")")
         return MacroTypes.DISPERSION, 0
     end
-    debug("Condition: Mana level is OK (" .. (currentMana or 0) .. ")")
 
     -- Check if any buffs are missing
     local missingBuffs = {}
@@ -91,13 +89,11 @@ local function getShadowPriestMacro()
         debug("ACTION: Buff sequence. (Missing buffs: " .. table.concat(missingBuffs, ", ") .. ")")
         return MacroTypes.BUFF_SEQUENCE, 0
     end
-    debug("Condition: All buffs are present")
 
     if not UnitAffectingCombat("focus") then
-        debug("ACTION: Doing nothing. (Focus not in combat)")
         return MacroTypes.DOING_NOTHING, 0
     end
-    debug("Condition: Focus is in combat")
+    debug("---------- New Rotation Tick ----------")
 
     -- Check focus target for debuffs
     local focusName, _ = UnitName("focustarget")
