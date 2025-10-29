@@ -39,7 +39,7 @@ end
 -- Function to return a tuple (key, target) based on current conditions
 local function getHolyPaladinMacro()
     
-    local focusName, _ = UnitName("focus")
+    local focusName = UnitName("focus")
 
     -- 1. Use Divine Plea when mana is low and off cooldown
     local currentMana = UnitPower("player", 0)
@@ -60,7 +60,7 @@ local function getHolyPaladinMacro()
     debug("---------- New Rotation Tick ----------")
 
     -- 2. Cast Beacon of Light if not already on focus
-    if not UnitBuff("focus", "Beacon of Light") then
+    if not UnitAura("focus", "Beacon of Light", nil , "PLAYER") then
         debug("ACTION: Beacon of Light. (Not on focus)")
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
@@ -94,7 +94,7 @@ local function getHolyPaladinMacro()
             local percent = health / maxHealth
             if percent < lowestPercent then
                 lowestPercent = percent
-                if not name == focusName then -- Skip the focus target
+                if name ~= focusName then -- Skip the focus target
                     targetIndex = i
                 end
             end
