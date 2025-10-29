@@ -59,7 +59,7 @@ end
 
 -- Function to return a tuple (key, target) based on current conditions
 local function getRetriPaladinMacro()
-    if not UnitAffectingCombat("player") or IsMounted() then
+    if not UnitAffectingCombat("focustarget") or IsMounted() then
         return MacroTypes.DOING_NOTHING, 0
     end
     
@@ -68,20 +68,20 @@ local function getRetriPaladinMacro()
         return MacroTypes.DOING_NOTHING, 0
     end
     debug("---------- New Rotation Tick ----------")
-    
+    local gcd = getSpellCooldownRemaining("Blessing of Might")
+
 
     -- 1. Judgement of Light
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
-    if judgementCooldown <= 0.2 then
+    if judgementCooldown <= gcd then
         debug("ACTION: Judgement. (Available)")
-        debug(macroMap[MacroTypes.JUDGEMENT])
         return MacroTypes.JUDGEMENT, 0
     end
     debug(string.format("Condition: Judgement CD=%.1f", judgementCooldown))
     
     -- 2. Avenging Wrath
     local avengingWrathCooldown = getSpellCooldownRemaining("Avenging Wrath")
-    if avengingWrathCooldown <= 0.2 then
+    if avengingWrathCooldown <= gcd then
         debug("ACTION: Avenging Wrath. (Available)")
         return MacroTypes.AVENGING_WRATH, 0
     end
@@ -89,7 +89,7 @@ local function getRetriPaladinMacro()
 
     -- 3. Divine Storm
     local divineStormCooldown = getSpellCooldownRemaining("Divine Storm")
-    if divineStormCooldown <= 0.2 then
+    if divineStormCooldown <= gcd then
         debug("ACTION: Divine Storm. (Available)")
         return MacroTypes.DIVINE_STORM, 0
     end
@@ -97,7 +97,7 @@ local function getRetriPaladinMacro()
 
     -- 4. Crusader Strike
     local crusaderStrikeCooldown = getSpellCooldownRemaining("Crusader Strike")
-    if crusaderStrikeCooldown <= 0.2 then
+    if crusaderStrikeCooldown <= gcd then
         debug("ACTION: Crusader Strike. (Available)")
         return MacroTypes.CRUSADER_STRIKE, 0
     end
@@ -109,7 +109,7 @@ local function getRetriPaladinMacro()
     local maxHealth = UnitHealthMax("focustarget")
     if maxHealth > 0 then
         local healthPercent = (health / maxHealth) * 100
-        if hammerOfWrathCooldown <= 0.2 and healthPercent < 20 then
+        if hammerOfWrathCooldown <= gcd and healthPercent < 20 then
             debug(string.format("ACTION: Hammer of Wrath. (Available and target health is %.1f%%)", healthPercent))
             return MacroTypes.HAMMER_OF_WRATH, 0
         end
@@ -120,7 +120,7 @@ local function getRetriPaladinMacro()
 
     -- 6. Consecration
     local consecrationCooldown = getSpellCooldownRemaining("Consecration")
-    if consecrationCooldown <= 0.2 then
+    if consecrationCooldown <= gcd then
         debug("ACTION: Consecration. (Available)")
         return MacroTypes.CONSECRATION, 0
     end
@@ -128,15 +128,15 @@ local function getRetriPaladinMacro()
 
     -- 7. Exorcism
     local exorcismCooldown = getSpellCooldownRemaining("Exorcism")
-    if exorcismCooldown <= 0.2 and UnitBuff("player", "The Art of War") then
+    if exorcismCooldown <= gcd and UnitBuff("player", "The Art of War") then
         debug("ACTION: Exorcism. (Available with The Art of War buff)")
         return MacroTypes.EXORCISM, 0
     end
-    debug(string.format("Condition: Exorcism CD=%.1f, Art of War buff: %s", exorcismCooldown, tostring(UnitBuff("player", "The Art of War"))))
+    debug(string.format("Condition: Exorcism CD=%.1f", exorcismCooldown))
 
     -- 8. Divine Plea
     local divinePleaCooldown = getSpellCooldownRemaining("Divine Plea")
-    if divinePleaCooldown <= 0.2 then
+    if divinePleaCooldown <= gcd then
         debug("ACTION: Divine Plea. (Available)")
         return MacroTypes.DIVINE_PLEA, 0
     end
@@ -206,7 +206,6 @@ local function ReinitializeKeybinds()
         local buttonName = "MacroButton_" .. binding
         local button = buttonFrames[buttonName]
         if button then
-            debug("Reinitializing keybind for " .. binding)
             button:SetAttribute("macrotext", macroMap[key])
         end
         SetBindingClick(binding, buttonName)
