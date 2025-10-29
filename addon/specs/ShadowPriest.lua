@@ -98,8 +98,9 @@ local function getShadowPriestMacro()
     -- Check focus target for debuffs
     local focusName, _ = UnitName("focustarget")
     if focusName and not UnitIsDeadOrGhost("focustarget") then
+        local gcd = getSpellCooldownRemaining("Devouring Plague")
         local start, duration, enabled, modRate = GetSpellCooldown("Shadowfiend")
-        if start <= 0.1 and not UnitBuff("player", "Shadowfiend") then
+        if start <= gcd and not UnitBuff("player", "Shadowfiend") then
             -- Highest priority in combat: Shadowfiend
             debug("ACTION: Shadowfiend. (Available)")
             return MacroTypes.SHADOWFIEND, 0

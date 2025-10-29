@@ -125,6 +125,7 @@ local function getBalanceDruidMacro()
     end
     
     debug("---------- New Rotation Tick ----------")
+    local gcd = getSpellCooldownRemaining("Moonfire")
 
     if not UnitBuff("player", "Moonkin Form") then
         debug("ACTION: Moonkin Form. (Not in form)")
@@ -147,24 +148,20 @@ local function getBalanceDruidMacro()
     debug("Condition: Faerie Fire is on target.")
 
     -- 4) Moonfire
-    local moonfireCooldown = getSpellCooldownRemaining("Moonfire")
-    if not UnitDebuff("focustarget", "Moonfire") and not UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME) then
+    if not UnitAura("focustarget", "Moonfire", nil, "PLAYER|HARMFUL") and not UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME) then
         debug("ACTION: Moonfire. (Debuff not on target and not in Solar Eclipse)")
         return MacroTypes.MOONFIRE, 0
     end
-    debug(string.format("Condition: Moonfire CD=%.1f, Solar Eclipse buff: %s", moonfireCooldown, tostring(UnitBuff("player", SOLAR_ECLIPSE_BUFF_NAME))))
 
     -- 5) Insect Swarm
-    local insectSwarmCooldown = getSpellCooldownRemaining("Insect Swarm")
-    if not UnitDebuff("focustarget", "Insect Swarm") and not UnitBuff("player", LUNAR_ECLIPSE_BUFF_NAME) then
+    if not UnitAura("focustarget", "Insect Swarm", nil, "PLAYER|HARMFUL") and not UnitBuff("player", LUNAR_ECLIPSE_BUFF_NAME) then
         debug("ACTION: Insect Swarm. (Debuff not on target and not in Lunar Eclipse)")
         return MacroTypes.INSECT_SWARM, 0
     end
-    debug(string.format("Condition: Insect Swarm CD=%.1f, Lunar Eclipse buff: %s", insectSwarmCooldown, tostring(UnitBuff("player", LUNAR_ECLIPSE_BUFF_NAME))))
 
     -- 6) Starfall if not on cooldown
     local starfallCooldown = getSpellCooldownRemaining("Starfall")
-    if starfallCooldown <= 0.2 then
+    if starfallCooldown <= gcd then
         debug("ACTION: Starfall. (Available)")
         return MacroTypes.STARFALL, 0
     end
