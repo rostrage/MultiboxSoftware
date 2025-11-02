@@ -53,6 +53,17 @@ local function ensureAuraFrame()
     _G.ShadowPriestAuraFrame = f
 end
 
+-- ============================
+
+local function getSpellCooldownRemaining(spellName)
+    local startTime, duration, _ = GetSpellCooldown(spellName)
+    if startTime and startTime > 0 then
+        local remaining = (startTime + duration) - GetTime()
+        return remaining > 0 and remaining or 0
+    end
+    return 0
+end
+
 -- Function to return a tuple (key, target) based on current conditions
 local function getShadowPriestMacro()
     
@@ -93,11 +104,11 @@ local function getShadowPriestMacro()
     if not UnitAffectingCombat("focus") then
         return MacroTypes.DOING_NOTHING, 0
     end
-    debug("---------- New Rotation Tick ----------")
 
     -- Check focus target for debuffs
     local focusName, _ = UnitName("focustarget")
     if focusName and not UnitIsDeadOrGhost("focustarget") then
+        debug("---------- New Rotation Tick ----------")
         local gcd = getSpellCooldownRemaining("Devouring Plague")
         local start, duration, enabled, modRate = GetSpellCooldown("Shadowfiend")
         if start <= gcd and not UnitBuff("player", "Shadowfiend") then
