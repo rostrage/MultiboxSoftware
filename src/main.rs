@@ -9,22 +9,28 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use iced::widget::{button, column, text, Column};
 use windows::{
     core::*,
     Win32::{
         Foundation::{HWND, LPARAM, WPARAM},
         Graphics::Gdi::{
-            BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel, ReleaseDC, SelectObject, SRCCOPY
+            BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
+            GetPixel, ReleaseDC, SelectObject, SRCCOPY,
         },
         UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
+            Input::KeyboardAndMouse::{
+                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,
+                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
+            },
             WindowsAndMessaging::{
-                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP, SetWindowPos, SWP_NOSIZE, SWP_NOMOVE, HWND_TOP, SWP_NOZORDER
+                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW,
+                SetWindowPos, SetWindowTextW, HWND_TOP, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+                WM_KEYDOWN, WM_KEYUP,
             },
         },
     },
 };
-use iced::widget::{button, column, text, Column};
 
 // Configuration structs for window positions and sizes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +52,7 @@ struct HwndWrapper(HWND);
 
 impl std::hash::Hash for HwndWrapper {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.0.hash(state);
+        self.0 .0.hash(state);
     }
 }
 
@@ -62,14 +68,12 @@ static mut CONFIG: Option<Vec<ConfigFile>> = None;
 // Load configuration from JSON file
 fn load_config() {
     match std::fs::read_to_string("window_config.json") {
-        Ok(contents) => {
-            match serde_json::from_str::<Vec<ConfigFile>>(&contents) {
-                Ok(config) => unsafe {
-                    CONFIG = Some(config);
-                },
-                Err(e) => println!("Failed to parse JSON: {}", e),
-            }
-        }
+        Ok(contents) => match serde_json::from_str::<Vec<ConfigFile>>(&contents) {
+            Ok(config) => unsafe {
+                CONFIG = Some(config);
+            },
+            Err(e) => println!("Failed to parse JSON: {}", e),
+        },
         Err(e) => println!("Failed to read config file: {}", e),
     }
 }
@@ -89,7 +93,7 @@ fn get_window_config(index: usize) -> Option<&'static WindowConfig> {
 // Find the lowest available OMB number
 fn find_lowest_omb_number() -> Option<usize> {
     let mut used_numbers = HashSet::new();
-    
+
     unsafe {
         if let Some(ref config) = CONFIG {
             for config_file in config.iter() {
@@ -99,7 +103,7 @@ fn find_lowest_omb_number() -> Option<usize> {
             }
         }
     }
-    
+
     // Find the smallest number not in use
     for i in 0.. {
         if !used_numbers.contains(&i) {
@@ -127,11 +131,10 @@ fn set_window_position(hwnd: HWND, config: &WindowConfig) {
 // Rename window to OMB format
 fn rename_window(hwnd: HWND, new_title: &str) {
     unsafe {
-        let title_wide: Vec<u16> = new_title.encode_utf16().collect();
-        // Use SetWindowTextW to rename the window
-        // Note: This function needs to be imported from Windows API
-        // For now, we'll just print the new title
-        println!("Would rename window to: {}", new_title);
+        let mut title_wide: Vec<u16> = new_title.encode_utf16().collect();
+        title_wide.push(0);
+        SetWindowTextW(hwnd, windows::core::PCWSTR::from_raw(title_wide.as_ptr()));
+        println!("Renamed window to: {}", new_title);
     }
 }
 
@@ -160,10 +163,33 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         GetWindowTextW(hwnd, &mut title_buf);
 
         let title_str = String::from_utf16_lossy(&title_buf);
-        // if title_str.starts_with("OMB 2") {
-        if title_str.starts_with("OMB ") && !title_str.starts_with("OMB 8") {
-        // if title_str.starts_with("World of Warcraft") || title_str.starts_with("OMB 3") || title_str.starts_with("OMB 4") || title_str.starts_with("OMB 5") || title_str.starts_with("OMB 6"){
+
+        // Handle "OMB" prefix windows
+        if title_str.starts_with("OMB ") {
             HWNDS.push(hwnd);
+
+            // Extract the number from "OMB X" format
+            if let Some(num_str) = title_str[4..].split_whitespace().next() {
+                if let Ok(index) = num_str.parse::<usize>() {
+                    if let Some(config) = get_window_config(index - 1) {
+                        set_window_position(hwnd, config);
+                    }
+                }
+            }
+        }
+        // Handle "World of Warcraft" windows - rename to lowest available OMB number
+        else if title_str.starts_with("World of Warcraft") {
+            if let Some(lowest_num) = find_lowest_omb_number() {
+                let new_title = format!("OMB {}", lowest_num + 1);
+                rename_window(hwnd, &new_title);
+
+                // Apply position configuration for the new OMB number
+                if let Some(config) = get_window_config(lowest_num) {
+                    set_window_position(hwnd, config);
+                }
+
+                HWNDS.push(hwnd);
+            }
         }
     }
 
@@ -186,10 +212,8 @@ impl Counter {
             // The increment button. We tell it to produce an
             // `Increment` message when pressed
             button("+").on_press(Message::Increment),
-
             // We show the value of the counter here
             text(self.value).size(50),
-
             // The decrement button. We tell it to produce a
             // `Decrement` message when pressed
             button("-").on_press(Message::Decrement),
@@ -209,6 +233,10 @@ impl Counter {
 
 fn main() {
     // iced::run("A cool counter", Counter::update, Counter::view);
+
+    // Load configuration from JSON file
+    load_config();
+
     unsafe {
         // Initialize scancode mapping
         let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
@@ -310,7 +338,9 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                     PixelX,
                     PixelY,
                     SRCCOPY,
-                ).is_err() {
+                )
+                .is_err()
+                {
                     break;
                 }
 
@@ -331,7 +361,7 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                         Some(hwnd),
                         WM_KEYDOWN as u32,
                         WPARAM(scancode.0.into()),
-                        LPARAM(0)
+                        LPARAM(0),
                     );
                     println!("Sending key {:x} to window {1}", scancode.0, title_string);
                     sleep(Duration::from_millis(10));
@@ -339,7 +369,7 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                         Some(hwnd),
                         WM_KEYUP as u32,
                         WPARAM(scancode.0.into()),
-                        LPARAM(0)
+                        LPARAM(0),
                     );
                     sleep(Duration::from_millis(100));
                 }
@@ -363,7 +393,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
     }
     // Calculate target index and modifier based on Lua logic
     let mod_index = (input - 1) % 4;
-    let numpad_index = (input -1) / 4;
+    let numpad_index = (input - 1) / 4;
     // println!("Targeting {:x} {:x} {:x}", input, mod_index, numpad_index);
 
     // Determine the modifier virtual key
@@ -388,23 +418,13 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         }
 
         // Send keydown for numpad
-        PostMessageW(
-            Some(hwnd),
-            WM_KEYDOWN as u32,
-            WPARAM(numpad_key),
-            LPARAM(0),
-        );
+        PostMessageW(Some(hwnd), WM_KEYDOWN as u32, WPARAM(numpad_key), LPARAM(0));
 
         // Wait a bit to ensure the key is registered
         std::thread::sleep(std::time::Duration::from_millis(10));
 
         // Send keyup for numpad
-        PostMessageW(
-            Some(hwnd),
-            WM_KEYUP as u32,
-            WPARAM(numpad_key),
-            LPARAM(0),
-        );
+        PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(numpad_key), LPARAM(0));
 
         // Send keyup for modifier (if present)
         if let Some(modifier) = modifier_vk {

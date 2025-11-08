@@ -1,0 +1,252 @@
+[
+    {
+        "positions": [
+            {
+                "x": 0,
+                "y": 0,
+                "width": 2560,
+                "height": 1440
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 2560,
+                "y": 0,
+                "width": 2560,
+                "height": 1280
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 2880,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 3200,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 3520,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 3840,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4160,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4480,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4800,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 2560,
+                "y": 1276,
+                "width": 320,
+                "height": 160
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4480,
+                "y": 0,
+                "width": 640,
+                "height": 480
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4480,
+                "y": 480,
+                "width": 640,
+                "height": 480
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 4480,
+                "y": 960,
+                "width": 640,
+                "height": 480
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1920,
+                "y": 0,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 640,
+                "y": 348,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 640,
+                "y": 696,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 640,
+                "y": 1044,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1280,
+                "y": 0,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1280,
+                "y": 348,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1280,
+                "y": 696,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1280,
+                "y": 1044,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1920,
+                "y": 0,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1920,
+                "y": 348,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1920,
+                "y": 696,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    },
+    {
+        "positions": [
+            {
+                "x": 1920,
+                "y": 1044,
+                "width": 640,
+                "height": 348
+            }
+        ]
+    }
+]
