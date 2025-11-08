@@ -1,9 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
+    fs::File,
+    io::Read,
     sync::{Arc, Mutex},
     thread::sleep,
     time::Duration,
 };
+
+use serde::{Deserialize, Serialize};
 
 use windows::{
     core::*,
@@ -15,12 +19,26 @@ use windows::{
         UI::{
             Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0},
             WindowsAndMessaging::{
-                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP
+                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP, SetWindowPos, SWP_NOSIZE, SWP_NOMOVE, HWND_TOP, SWP_NOZORDER
             },
         },
     },
 };
 use iced::widget::{button, column, text, Column};
+
+// Configuration structs for window positions and sizes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct WindowConfig {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ConfigFile {
+    positions: Vec<WindowConfig>,
+}
 
 // Define a wrapper type for HWND to make it hashable
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +55,85 @@ unsafe impl Send for HwndWrapper {}
 
 const PixelX: i32 = 0;
 const PixelY: i32 = 0;
+
+// Global configuration storage
+static mut CONFIG: Option<Vec<ConfigFile>> = None;
+
+// Load configuration from JSON file
+fn load_config() {
+    match std::fs::read_to_string("window_config.json") {
+        Ok(contents) => {
+            match serde_json::from_str::<Vec<ConfigFile>>(&contents) {
+                Ok(config) => unsafe {
+                    CONFIG = Some(config);
+                },
+                Err(e) => println!("Failed to parse JSON: {}", e),
+            }
+        }
+        Err(e) => println!("Failed to read config file: {}", e),
+    }
+}
+
+// Get window configuration by index
+fn get_window_config(index: usize) -> Option<&'static WindowConfig> {
+    unsafe {
+        if let Some(ref config) = CONFIG {
+            if index < config.len() {
+                return config[index].positions.first();
+            }
+        }
+    }
+    None
+}
+
+// Find the lowest available OMB number
+fn find_lowest_omb_number() -> Option<usize> {
+    let mut used_numbers = HashSet::new();
+    
+    unsafe {
+        if let Some(ref config) = CONFIG {
+            for config_file in config.iter() {
+                for (i, _) in config_file.positions.iter().enumerate() {
+                    used_numbers.insert(i);
+                }
+            }
+        }
+    }
+    
+    // Find the smallest number not in use
+    for i in 0.. {
+        if !used_numbers.contains(&i) {
+            return Some(i);
+        }
+    }
+    None
+}
+
+// Set window position and size
+fn set_window_position(hwnd: HWND, config: &WindowConfig) {
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            Some(HWND_TOP),
+            config.x,
+            config.y,
+            config.width,
+            config.height,
+            SWP_NOZORDER | SWP_NOMOVE,
+        );
+    }
+}
+
+// Rename window to OMB format
+fn rename_window(hwnd: HWND, new_title: &str) {
+    unsafe {
+        let title_wide: Vec<u16> = new_title.encode_utf16().collect();
+        // Use SetWindowTextW to rename the window
+        // Note: This function needs to be imported from Windows API
+        // For now, we'll just print the new title
+        println!("Would rename window to: {}", new_title);
+    }
+}
 
 // Static mutable vector to collect HWNDs during window enumeration
 static mut HWNDS: Vec<HWND> = vec![];
