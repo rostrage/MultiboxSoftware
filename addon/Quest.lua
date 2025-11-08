@@ -12,7 +12,6 @@ end
 function MultiboxQuest.OnEvent(self, event, ...)
     if event == "QUEST_CONFIRM" then
         local questGiver, questTitle, unk = ...
-        DEFAULT_CHAT_FRAME:AddMessage("Accepting shared quest: " .. questTitle)
         AcceptQuest()
     elseif event == "QUEST_DETAIL" then
         -- from a player

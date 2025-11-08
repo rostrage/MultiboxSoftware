@@ -11,7 +11,6 @@ end
 function MultiboxParty.OnEvent(self, event, ...)
     if event == "PARTY_INVITE_REQUEST" then
         local inviter, unk = ...
-        DEFAULT_CHAT_FRAME:AddMessage("Accepting party invite from: " .. inviter)
         AcceptGroup()
     end
 end
