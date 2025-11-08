@@ -1,19 +1,16 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs::File,
-    io::Read,
     sync::{Arc, Mutex},
     thread::sleep,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use serde::{Deserialize, Serialize};
 
-use iced::widget::{button, column, text, Column};
 use windows::{
     core::*,
     Win32::{
-        Foundation::{HWND, LPARAM, WPARAM},
+        Foundation::{HWND, LPARAM, RECT, WPARAM},
         Graphics::Gdi::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
             GetPixel, ReleaseDC, SelectObject, SRCCOPY,
@@ -24,9 +21,9 @@ use windows::{
                 VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
             },
             WindowsAndMessaging::{
-                EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW,
-                SetWindowPos, SetWindowTextW, HWND_TOP, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
-                WM_KEYDOWN, WM_KEYUP,
+                EnumWindows, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
+                PostMessageW, SetWindowPos, SetWindowTextW, HWND_TOP, SWP_NOZORDER, WM_KEYDOWN,
+                WM_KEYUP,
             },
         },
     },
@@ -59,8 +56,8 @@ impl std::hash::Hash for HwndWrapper {
 // Manually implement Send for HwndWrapper
 unsafe impl Send for HwndWrapper {}
 
-const PixelX: i32 = 0;
-const PixelY: i32 = 0;
+const PIXEL_X: i32 = 0;
+const PIXEL_Y: i32 = 0;
 
 // Global configuration storage
 static mut CONFIG: Option<Vec<ConfigFile>> = None;
@@ -116,7 +113,7 @@ fn find_lowest_omb_number() -> Option<usize> {
 // Set window position and size
 fn set_window_position(hwnd: HWND, config: &WindowConfig) {
     unsafe {
-        SetWindowPos(
+        let _ = SetWindowPos(
             hwnd,
             Some(HWND_TOP),
             config.x,
@@ -133,7 +130,7 @@ fn rename_window(hwnd: HWND, new_title: &str) {
     unsafe {
         let mut title_wide: Vec<u16> = new_title.encode_utf16().collect();
         title_wide.push(0);
-        SetWindowTextW(hwnd, windows::core::PCWSTR::from_raw(title_wide.as_ptr()));
+        let _ = SetWindowTextW(hwnd, windows::core::PCWSTR::from_raw(title_wide.as_ptr()));
         println!("Renamed window to: {}", new_title);
     }
 }
@@ -147,7 +144,7 @@ fn find_all_windows_with_title() -> Vec<HWND> {
         // Clear the static vector before enumerating
         HWNDS.clear();
 
-        EnumWindows(Some(enum_window_callback), LPARAM(0));
+        let _ = EnumWindows(Some(enum_window_callback), LPARAM(0));
 
         // Return a copy of collected HWNDs
         HWNDS.clone()
@@ -196,40 +193,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
     windows::core::BOOL::from(true)
 }
 
-#[derive(Default)]
-struct Counter {
-    value: i32,
-}
-#[derive(Debug, Clone, Copy)]
-pub enum Message {
-    Increment,
-    Decrement,
-}
-impl Counter {
-    pub fn view(&self) -> Column<Message> {
-        // We use a column: a simple vertical layout
-        column![
-            // The increment button. We tell it to produce an
-            // `Increment` message when pressed
-            button("+").on_press(Message::Increment),
-            // We show the value of the counter here
-            text(self.value).size(50),
-            // The decrement button. We tell it to produce a
-            // `Decrement` message when pressed
-            button("-").on_press(Message::Decrement),
-        ]
-    }
-    pub fn update(&mut self, message: Message) {
-        match message {
-            Message::Increment => {
-                self.value += 1;
-            }
-            Message::Decrement => {
-                self.value -= 1;
-            }
-        }
-    }
-}
+
 
 fn main() {
     // iced::run("A cool counter", Counter::update, Counter::view);
@@ -237,69 +201,92 @@ fn main() {
     // Load configuration from JSON file
     load_config();
 
-    unsafe {
-        // Initialize scancode mapping
-        let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
-        scancode_map.insert(0x01, VK_F1);
-        scancode_map.insert(0x02, VK_F2);
-        scancode_map.insert(0x03, VK_F3);
-        scancode_map.insert(0x04, VK_F4);
-        scancode_map.insert(0x05, VK_F5);
-        scancode_map.insert(0x06, VK_F6);
-        scancode_map.insert(0x07, VK_F7);
-        scancode_map.insert(0x08, VK_F8);
-        scancode_map.insert(0x09, VK_F9);
-        scancode_map.insert(0x0A, VK_F10);
-        scancode_map.insert(0x0B, VK_F11);
-        scancode_map.insert(0x0C, VK_F12);
+    // Initialize scancode mapping
+    let mut scancode_map: HashMap<u8, VIRTUAL_KEY> = HashMap::new();
+    scancode_map.insert(0x01, VK_F1);
+    scancode_map.insert(0x02, VK_F2);
+    scancode_map.insert(0x03, VK_F3);
+    scancode_map.insert(0x04, VK_F4);
+    scancode_map.insert(0x05, VK_F5);
+    scancode_map.insert(0x06, VK_F6);
+    scancode_map.insert(0x07, VK_F7);
+    scancode_map.insert(0x08, VK_F8);
+    scancode_map.insert(0x09, VK_F9);
+    scancode_map.insert(0x0A, VK_F10);
+    scancode_map.insert(0x0B, VK_F11);
+    scancode_map.insert(0x0C, VK_F12);
 
-        let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
+    let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
+    let window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 
-        // Track currently active HWNDs using our wrapper type
-        let hwnd_set: Arc<Mutex<HashSet<HwndWrapper>>> = Arc::new(Mutex::new(HashSet::new()));
+    // Track currently active HWNDs using our wrapper type
+    let hwnd_set: Arc<Mutex<HashSet<HwndWrapper>>> = Arc::new(Mutex::new(HashSet::new()));
 
-        // Start the watcher thread
-        std::thread::spawn(move || {
-            loop {
-                sleep(Duration::from_millis(1000));
+    // Start the watcher thread
+    std::thread::spawn(move || {
+        loop {
+            sleep(Duration::from_millis(1000));
 
-                // Find all current windows with target title
-                let hwnds = find_all_windows_with_title();
+            // Find all current windows with target title
+            let hwnds = find_all_windows_with_title();
 
-                for &hwnd in &hwnds {
-                    let mut set = hwnd_set.lock().unwrap();
-                    let wrapped = HwndWrapper(hwnd);
-                    if !set.contains(&wrapped) {
-                        println!("Spawning new handler thread");
-                        set.insert(wrapped);
+            for &hwnd in &hwnds {
+                let mut set = hwnd_set.lock().unwrap();
+                let wrapped = HwndWrapper(hwnd);
+                if !set.contains(&wrapped) {
+                    println!("Spawning new handler thread");
+                    set.insert(wrapped);
 
-                        // Spawn a new thread to handle this HWND
-                        let scancode_arc_clone = Arc::clone(&scancode_map_arc);
-                        std::thread::spawn(move || process_window(wrapped, &scancode_arc_clone));
-                    }
+                    // Spawn a new thread to handle this HWND
+                    let scancode_arc_clone = Arc::clone(&scancode_map_arc);
+                    let window_map_clone = Arc::clone(&window_map);
+                    std::thread::spawn(move || {
+                        process_window(wrapped, &scancode_arc_clone, &window_map_clone)
+                    });
                 }
             }
-        });
-
-        // Keep main thread alive (to prevent early exit)
-        loop {
-            sleep(Duration::from_secs(1));
         }
+    });
+
+    // Keep main thread alive (to prevent early exit)
+    loop {
+        sleep(Duration::from_secs(1));
     }
 }
 
 // Process a single HWND
-fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>) {
+fn process_window(
+    wrapped: HwndWrapper,
+    scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
+    window_map: &Arc<Mutex<HashMap<usize, HwndWrapper>>>,
+) {
     let hwnd = wrapped.0;
-    unsafe {
+    let mut keys_enabled = true;
+    let mut last_swap_time = Instant::now();
+
+    let (title_string, own_omb_num) = unsafe {
         let len = GetWindowTextLengthW(hwnd);
         let mut title_buf = vec![0u16; (len + 1) as usize];
         GetWindowTextW(hwnd, &mut title_buf);
-        let title_string = String::from_utf16_lossy(&title_buf);
+        let title = String::from_utf16_lossy(&title_buf)
+            .trim_end_matches('\0')
+            .to_string();
+        let number = title
+            .strip_prefix("OMB ")
+            .and_then(|s| s.split_whitespace().next())
+            .and_then(|s| s.parse().ok());
+        (title, number)
+    };
+
+    if let Some(num) = own_omb_num {
+        window_map.lock().unwrap().insert(num, wrapped);
+    }
+
+    unsafe {
         loop {
             // Check if the window still exists
-            let is_valid: BOOL = IsWindow(Some(hwnd)).into();
-            if !is_valid.as_bool() {
+            if !IsWindow(Some(hwnd)).as_bool() {
                 break;
             }
 
@@ -318,54 +305,112 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
 
             let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 1, 1);
             if hbm_screen_cap.is_invalid() {
-                DeleteDC(hdc_mem_dc);
+                let _ = DeleteDC(hdc_mem_dc);
                 ReleaseDC(Some(hwnd), hdc_target);
                 break;
             }
 
             // Select the bitmap into memory DC
-            SelectObject(hdc_mem_dc, hbm_screen_cap.into());
+            let old_bitmap = SelectObject(hdc_mem_dc, hbm_screen_cap.into());
 
-            loop {
-                // Copy pixel to memory DC
-                if BitBlt(
-                    hdc_mem_dc,
-                    0,
-                    0,
-                    1,
-                    1,
-                    Some(hdc_target),
-                    PixelX,
-                    PixelY,
-                    SRCCOPY,
-                )
-                .is_err()
-                {
-                    break;
+            // Copy pixel to memory DC
+            if BitBlt(
+                hdc_mem_dc,
+                0,
+                0,
+                1,
+                1,
+                Some(hdc_target),
+                PIXEL_X,
+                PIXEL_Y,
+                SRCCOPY,
+            )
+            .is_err()
+            {
+                SelectObject(hdc_mem_dc, old_bitmap);
+                let _ = DeleteObject(hbm_screen_cap.into());
+                let _ = DeleteDC(hdc_mem_dc);
+                ReleaseDC(Some(hwnd), hdc_target);
+                continue; // Continue to next iteration
+            }
+
+            // Get the pixel color (in BGR format)
+            let actual_color = GetPixel(hdc_mem_dc, 0, 0);
+
+            // Extract color components
+            let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
+            let green = ((actual_color.0 >> 8) & 0xFF) as u8;
+            let red = (actual_color.0 & 0xFF) as u8;
+
+            if blue == 1 && keys_enabled {
+                keys_enabled = false;
+                println!("[{}] Keys disabled", title_string);
+            } else if blue == 2 && !keys_enabled {
+                keys_enabled = true;
+                println!("[{}] Keys enabled", title_string);
+            } else if blue > 2 {
+                if last_swap_time.elapsed() > Duration::from_secs(1) {
+                    let target_omb_num = (blue - 2) as usize;
+                    println!(
+                        "[{}] Received swap command with window {}",
+                        title_string, target_omb_num
+                    );
+                    if let Some(own_num) = own_omb_num {
+                        if own_num != target_omb_num {
+                            let map = window_map.lock().unwrap();
+                            if let Some(&target_hwnd_wrapper) = map.get(&target_omb_num) {
+                                let target_hwnd = target_hwnd_wrapper.0;
+                                let own_hwnd = wrapped.0;
+
+                                let mut own_rect = RECT::default();
+                                let mut target_rect = RECT::default();
+
+                                if GetWindowRect(own_hwnd, &mut own_rect).is_ok()
+                                    && GetWindowRect(target_hwnd, &mut target_rect).is_ok()
+                                {
+                                    let own_width = own_rect.right - own_rect.left;
+                                    let own_height = own_rect.bottom - own_rect.top;
+                                    let target_width = target_rect.right - target_rect.left;
+                                    let target_height = target_rect.bottom - target_rect.top;
+
+                                    let _ = SetWindowPos(
+                                        own_hwnd,
+                                        None,
+                                        target_rect.left,
+                                        target_rect.top,
+                                        target_width,
+                                        target_height,
+                                        SWP_NOZORDER,
+                                    );
+                                    let _ = SetWindowPos(
+                                        target_hwnd,
+                                        None,
+                                        own_rect.left,
+                                        own_rect.top,
+                                        own_width,
+                                        own_height,
+                                        SWP_NOZORDER,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    last_swap_time = Instant::now();
                 }
+            }
 
-                // Get the pixel color (in BGR format)
-                let actual_color = GetPixel(hdc_mem_dc, 0, 0);
-
-                // Extract red component
-                let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
-                let green = ((actual_color.0 >> 8) & 0xFF) as u8;
-                let red = (actual_color.0 & 0xFF) as u8;
-                // println!("color {:x} {:x} {:x} {:x}", actual_color.0, blue, green, red);
-
-                // Press the corresponding key if found in map
+            if keys_enabled {
                 let scancode_map = scancode_map_arc.lock().unwrap();
                 if let Some(&scancode) = scancode_map.get(&red) {
                     send_target_combination(hwnd, green);
-                    PostMessageW(
+                    let _ = PostMessageW(
                         Some(hwnd),
                         WM_KEYDOWN as u32,
                         WPARAM(scancode.0.into()),
                         LPARAM(0),
                     );
-                    println!("Sending key {:x} to window {1}", scancode.0, title_string);
                     sleep(Duration::from_millis(10));
-                    PostMessageW(
+                    let _ = PostMessageW(
                         Some(hwnd),
                         WM_KEYUP as u32,
                         WPARAM(scancode.0.into()),
@@ -373,16 +418,22 @@ fn process_window(wrapped: HwndWrapper, scancode_map_arc: &Arc<Mutex<HashMap<u8,
                     );
                     sleep(Duration::from_millis(100));
                 }
-
-                // Sleep between checks
-                sleep(Duration::from_millis(15));
             }
 
             // Clean up GDI resources
-            DeleteObject(hbm_screen_cap.into());
-            DeleteDC(hdc_mem_dc);
+            SelectObject(hdc_mem_dc, old_bitmap);
+            let _ = DeleteObject(hbm_screen_cap.into());
+            let _ = DeleteDC(hdc_mem_dc);
             ReleaseDC(Some(hwnd), hdc_target);
+
+            // Sleep between checks
+            sleep(Duration::from_millis(15));
         }
+    }
+
+    if let Some(num) = own_omb_num {
+        window_map.lock().unwrap().remove(&num);
+        println!("[{}] Unregistered window.", title_string);
     }
 }
 
@@ -409,7 +460,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
     unsafe {
         // Send keydown for modifier (if present)
         if let Some(modifier) = modifier_vk {
-            PostMessageW(
+            let _ = PostMessageW(
                 Some(hwnd),
                 WM_KEYDOWN as u32,
                 WPARAM(modifier.0.into()),
@@ -418,17 +469,17 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         }
 
         // Send keydown for numpad
-        PostMessageW(Some(hwnd), WM_KEYDOWN as u32, WPARAM(numpad_key), LPARAM(0));
+        let _ = PostMessageW(Some(hwnd), WM_KEYDOWN as u32, WPARAM(numpad_key), LPARAM(0));
 
         // Wait a bit to ensure the key is registered
         std::thread::sleep(std::time::Duration::from_millis(10));
 
         // Send keyup for numpad
-        PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(numpad_key), LPARAM(0));
+        let _ = PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(numpad_key), LPARAM(0));
 
         // Send keyup for modifier (if present)
         if let Some(modifier) = modifier_vk {
-            PostMessageW(
+            let _ = PostMessageW(
                 Some(hwnd),
                 WM_KEYUP as u32,
                 WPARAM(modifier.0.into()),

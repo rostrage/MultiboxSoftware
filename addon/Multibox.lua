@@ -1,4 +1,6 @@
 SLASH_MBOX1 = '/mbox';
+local controlCommand = 0
+local keysEnabled = true
 -- Frame for drawing
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetPoint("TOPLEFT", 0, 0)
@@ -27,7 +29,11 @@ frame:HookScript("OnUpdate", function(self, elapsed)
         -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
         local r = key / 255
         local g = target / 255
-        drawPixel(r, g, 0)
+        local b = controlCommand / 255
+        drawPixel(r, g, b)
+        if controlCommand ~= 0 then
+            controlCommand = 0
+        end
     end
 end)
 
@@ -74,6 +80,7 @@ function SlashCmdList.MBOX_INIT(msg, editBox) -- 4.
     -- Initialize configuration system
     MultiboxConfig:RegisterOptions()
 end
+
 local CURRENT_SPEC = "Unsupported"
 local function init(msg, editBox)
     initTargettingKeybinds();
@@ -162,4 +169,34 @@ local function init(msg, editBox)
     end
     MultiboxConfig:UpdateSpecStatus(CURRENT_SPEC)
 end
-SlashCmdList["MBOX"] = init; -- Also a valid assignment strategy
+
+local function MboxCommandHandler(msg, editBox)
+    local cmd, args = msg:match("^(%S*)%s*(.-)$")
+    cmd = cmd and string.lower(cmd) or ""
+
+    if cmd == "toggle" then
+        keysEnabled = not keysEnabled
+        if keysEnabled then
+            controlCommand = 2 -- enable
+            DEFAULT_CHAT_FRAME:AddMessage("Keys enabled")
+        else
+            controlCommand = 1 -- disable
+            DEFAULT_CHAT_FRAME:AddMessage("Keys disabled")
+        end
+    elseif cmd == "swap" then
+        local target = tonumber(args)
+        if target and target > 0 then
+            controlCommand = target + 2
+            DEFAULT_CHAT_FRAME:AddMessage("Signaling swap with window " .. target)
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("Invalid swap target. Usage: /mbox swap <window_number>")
+        end
+    elseif cmd == "" then
+        init(msg, editBox)
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("Unknown mbox command: " .. cmd)
+        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|swap <target>]")
+    end
+end
+
+SlashCmdList["MBOX"] = MboxCommandHandler; -- Also a valid assignment strategy
