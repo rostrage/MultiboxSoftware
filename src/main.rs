@@ -123,7 +123,7 @@ fn set_window_position(hwnd: HWND, config: &WindowConfig) {
             config.y,
             config.width,
             config.height,
-            SWP_NOZORDER | SWP_NOMOVE,
+            SWP_NOZORDER,
         );
     }
 }
