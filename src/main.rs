@@ -260,17 +260,8 @@ fn main() {
     }
 }
 
-// Process a single HWND
-fn process_window(
-    wrapped: HwndWrapper,
-    scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
-    window_map: &Arc<Mutex<HashMap<usize, HwndWrapper>>>,
-) {
-    let hwnd = wrapped.0;
-    let mut keys_enabled = true;
-    let mut last_swap_time = Instant::now();
-
-    let (title_string, own_omb_num) = unsafe {
+fn get_window_title_and_omb_number(hwnd: HWND) -> (String, Option<usize>) {
+    unsafe {
         let len = GetWindowTextLengthW(hwnd);
         let mut title_buf = vec![0u16; (len + 1) as usize];
         GetWindowTextW(hwnd, &mut title_buf);
@@ -282,163 +273,220 @@ fn process_window(
             .and_then(|s| s.split_whitespace().next())
             .and_then(|s| s.parse().ok());
         (title, number)
-    };
+    }
+}
+
+fn capture_pixel_colors(hwnd: HWND) -> Option<(u32, u32)> {
+    unsafe {
+        let hdc_target = GetDC(Some(hwnd));
+        if hdc_target.is_invalid() {
+            return None;
+        }
+
+        let hdc_mem_dc = CreateCompatibleDC(Some(hdc_target));
+        if hdc_mem_dc.is_invalid() {
+            ReleaseDC(Some(hwnd), hdc_target);
+            return None;
+        }
+
+        let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 3, 1);
+        if hbm_screen_cap.is_invalid() {
+            let _ = DeleteDC(hdc_mem_dc);
+            ReleaseDC(Some(hwnd), hdc_target);
+            return None;
+        }
+
+        let old_bitmap = SelectObject(hdc_mem_dc, hbm_screen_cap.into());
+
+        if BitBlt(
+            hdc_mem_dc,
+            0,
+            0,
+            3,
+            1,
+            Some(hdc_target),
+            PIXEL_X,
+            PIXEL_Y,
+            SRCCOPY,
+        )
+        .is_err()
+        {
+            SelectObject(hdc_mem_dc, old_bitmap);
+            let _ = DeleteObject(hbm_screen_cap.into());
+            let _ = DeleteDC(hdc_mem_dc);
+            ReleaseDC(Some(hwnd), hdc_target);
+            return None;
+        }
+
+        let sentinel = GetPixel(hdc_mem_dc, SENTINEL_X, PIXEL_Y).0;
+        let command = GetPixel(hdc_mem_dc, PIXEL_X, PIXEL_Y).0;
+
+        // Cleanup
+        SelectObject(hdc_mem_dc, old_bitmap);
+        let _ = DeleteObject(hbm_screen_cap.into());
+        let _ = DeleteDC(hdc_mem_dc);
+        ReleaseDC(Some(hwnd), hdc_target);
+
+        Some((sentinel, command))
+    }
+}
+
+fn handle_key_toggle_command(blue: u8, keys_enabled: &mut bool, title_string: &str) {
+    if blue == 1 && *keys_enabled {
+        *keys_enabled = false;
+        println!("[{}] Keys disabled", title_string);
+    } else if blue == 2 && !*keys_enabled {
+        *keys_enabled = true;
+        println!("[{}] Keys enabled", title_string);
+    }
+}
+
+fn swap_window_positions(hwnd1: HWND, hwnd2: HWND) {
+    unsafe {
+        let mut rect1 = RECT::default();
+        let mut rect2 = RECT::default();
+
+        if GetWindowRect(hwnd1, &mut rect1).is_ok() && GetWindowRect(hwnd2, &mut rect2).is_ok() {
+            let width1 = rect1.right - rect1.left;
+            let height1 = rect1.bottom - rect1.top;
+            let width2 = rect2.right - rect2.left;
+            let height2 = rect2.bottom - rect2.top;
+
+            let _ = SetWindowPos(
+                hwnd1,
+                None,
+                rect2.left,
+                rect2.top,
+                width2,
+                height2,
+                SWP_NOZORDER,
+            );
+            let _ = SetWindowPos(
+                hwnd2,
+                None,
+                rect1.left,
+                rect1.top,
+                width1,
+                height1,
+                SWP_NOZORDER,
+            );
+        }
+    }
+}
+
+fn handle_window_swap(
+    title_string: &str,
+    own_omb_num: Option<usize>,
+    wrapped: HwndWrapper,
+    blue: u8,
+    last_swap_time: &mut Instant,
+    window_map: &Arc<Mutex<HashMap<usize, HwndWrapper>>>,
+) {
+    if last_swap_time.elapsed() <= Duration::from_secs(1) {
+        return;
+    }
+
+    let target_omb_num = (blue - 2) as usize;
+    println!(
+        "[{}] Received swap command with window {}",
+        title_string, target_omb_num
+    );
+
+    if let Some(own_num) = own_omb_num {
+        if own_num != target_omb_num {
+            let map = window_map.lock().unwrap();
+            if let Some(&target_hwnd_wrapper) = map.get(&target_omb_num) {
+                swap_window_positions(wrapped.0, target_hwnd_wrapper.0);
+            }
+        }
+    }
+    *last_swap_time = Instant::now();
+}
+
+fn send_keypress(hwnd: HWND, vk: VIRTUAL_KEY) {
+    unsafe {
+        let _ = PostMessageW(
+            Some(hwnd),
+            WM_KEYDOWN as u32,
+            WPARAM(vk.0.into()),
+            LPARAM(0),
+        );
+        sleep(Duration::from_millis(10));
+        let _ = PostMessageW(
+            Some(hwnd),
+            WM_KEYUP as u32,
+            WPARAM(vk.0.into()),
+            LPARAM(0),
+        );
+    }
+}
+
+fn handle_key_press(
+    hwnd: HWND,
+    red: u8,
+    green: u8,
+    scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
+) {
+    let scancode_map = scancode_map_arc.lock().unwrap();
+    if let Some(&scancode) = scancode_map.get(&red) {
+        send_target_combination(hwnd, green);
+        send_keypress(hwnd, scancode);
+        sleep(Duration::from_millis(100));
+    }
+}
+
+// Process a single HWND
+fn process_window(
+    wrapped: HwndWrapper,
+    scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
+    window_map: &Arc<Mutex<HashMap<usize, HwndWrapper>>>,
+) {
+    let hwnd = wrapped.0;
+    let mut keys_enabled = true;
+    let mut last_swap_time = Instant::now();
+
+    let (title_string, own_omb_num) = get_window_title_and_omb_number(hwnd);
 
     if let Some(num) = own_omb_num {
         window_map.lock().unwrap().insert(num, wrapped);
     }
 
-    unsafe {
-        loop {
-            // Check if the window still exists
+    loop {
+        unsafe {
             if !IsWindow(Some(hwnd)).as_bool() {
                 break;
             }
+        }
 
-            // Get device context for this window
-            let hdc_target = GetDC(Some(hwnd));
-            if hdc_target.is_invalid() {
-                break;
-            }
+        if let Some((sentinel, actual_color)) = capture_pixel_colors(hwnd) {
+            // Check sentinel color to ensure addon is active
+            if sentinel == SENTINEL_COLOR {
+                let blue = ((actual_color >> 16) & 0xFF) as u8;
+                let green = ((actual_color >> 8) & 0xFF) as u8;
+                let red = (actual_color & 0xFF) as u8;
 
-            // Create memory DC and compatible bitmap
-            let hdc_mem_dc = CreateCompatibleDC(Some(hdc_target));
-            if hdc_mem_dc.is_invalid() {
-                ReleaseDC(Some(hwnd), hdc_target);
-                break;
-            }
+                handle_key_toggle_command(blue, &mut keys_enabled, &title_string);
 
-            let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 3, 1);
-            if hbm_screen_cap.is_invalid() {
-                let _ = DeleteDC(hdc_mem_dc);
-                ReleaseDC(Some(hwnd), hdc_target);
-                break;
-            }
-
-            // Select the bitmap into memory DC
-            let old_bitmap = SelectObject(hdc_mem_dc, hbm_screen_cap.into());
-
-            // Copy pixel to memory DC
-            if BitBlt(
-                hdc_mem_dc,
-                0,
-                0,
-                3,
-                1,
-                Some(hdc_target),
-                PIXEL_X,
-                PIXEL_Y,
-                SRCCOPY,
-            )
-            .is_err()
-            {
-                SelectObject(hdc_mem_dc, old_bitmap);
-                let _ = DeleteObject(hbm_screen_cap.into());
-                let _ = DeleteDC(hdc_mem_dc);
-                ReleaseDC(Some(hwnd), hdc_target);
-                continue; // Continue to next iteration
-            }
-
-            // Get sentinel pixel colors
-            let sentinel = GetPixel(hdc_mem_dc, SENTINEL_X, PIXEL_Y);
-            
-            if sentinel.0 == SENTINEL_COLOR {
-                // Get the command pixel color (in BGR format)
-                let actual_color = GetPixel(hdc_mem_dc, PIXEL_X, PIXEL_Y);
-
-                // Extract color components
-                let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
-                let green = ((actual_color.0 >> 8) & 0xFF) as u8;
-                let red = (actual_color.0 & 0xFF) as u8;
-
-                if blue == 1 && keys_enabled {
-                    keys_enabled = false;
-                    println!("[{}] Keys disabled", title_string);
-                } else if blue == 2 && !keys_enabled {
-                    keys_enabled = true;
-                    println!("[{}] Keys enabled", title_string);
-                } else if blue > 2 {
-                    if last_swap_time.elapsed() > Duration::from_secs(1) {
-                        let target_omb_num = (blue - 2) as usize;
-                        println!(
-                            "[{}] Received swap command with window {}",
-                            title_string, target_omb_num
-                        );
-                        if let Some(own_num) = own_omb_num {
-                            if own_num != target_omb_num {
-                                let map = window_map.lock().unwrap();
-                                if let Some(&target_hwnd_wrapper) = map.get(&target_omb_num) {
-                                    let target_hwnd = target_hwnd_wrapper.0;
-                                    let own_hwnd = wrapped.0;
-
-                                    let mut own_rect = RECT::default();
-                                    let mut target_rect = RECT::default();
-
-                                    if GetWindowRect(own_hwnd, &mut own_rect).is_ok()
-                                        && GetWindowRect(target_hwnd, &mut target_rect).is_ok()
-                                    {
-                                        let own_width = own_rect.right - own_rect.left;
-                                        let own_height = own_rect.bottom - own_rect.top;
-                                        let target_width = target_rect.right - target_rect.left;
-                                        let target_height = target_rect.bottom - target_rect.top;
-
-                                        let _ = SetWindowPos(
-                                            own_hwnd,
-                                            None,
-                                            target_rect.left,
-                                            target_rect.top,
-                                            target_width,
-                                            target_height,
-                                            SWP_NOZORDER,
-                                        );
-                                        let _ = SetWindowPos(
-                                            target_hwnd,
-                                            None,
-                                            own_rect.left,
-                                            own_rect.top,
-                                            own_width,
-                                            own_height,
-                                            SWP_NOZORDER,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        last_swap_time = Instant::now();
-                    }
+                // 0 = do nothing, 1 = enable keys, 2 = disable keys, >2 = swap
+                if blue > 2 {
+                    handle_window_swap(
+                        &title_string,
+                        own_omb_num,
+                        wrapped,
+                        blue,
+                        &mut last_swap_time,
+                        window_map,
+                    );
                 }
 
                 if keys_enabled {
-                    let scancode_map = scancode_map_arc.lock().unwrap();
-                    if let Some(&scancode) = scancode_map.get(&red) {
-                        send_target_combination(hwnd, green);
-                        let _ = PostMessageW(
-                            Some(hwnd),
-                            WM_KEYDOWN as u32,
-                            WPARAM(scancode.0.into()),
-                            LPARAM(0),
-                        );
-                        sleep(Duration::from_millis(10));
-                        let _ = PostMessageW(
-                            Some(hwnd),
-                            WM_KEYUP as u32,
-                            WPARAM(scancode.0.into()),
-                            LPARAM(0),
-                        );
-                        sleep(Duration::from_millis(100));
-                    }
+                    handle_key_press(hwnd, red, green, scancode_map_arc);
                 }
             }
-
-            // Clean up GDI resources
-            SelectObject(hdc_mem_dc, old_bitmap);
-            let _ = DeleteObject(hbm_screen_cap.into());
-            let _ = DeleteDC(hdc_mem_dc);
-            ReleaseDC(Some(hwnd), hdc_target);
-
-            // Sleep between checks
-            sleep(Duration::from_millis(15));
         }
+
+        // Sleep between checks
+        sleep(Duration::from_millis(15));
     }
 
     if let Some(num) = own_omb_num {
