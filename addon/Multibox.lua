@@ -4,18 +4,25 @@ local keysEnabled = true
 -- Frame for drawing
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetPoint("TOPLEFT", 0, 0)
-frame:SetSize(1, 1)
+frame:SetSize(3, 1)
+frame:SetFrameStrata("HIGH")
 
--- Texture to draw pixel color
-local texture = frame:CreateTexture()
-texture:SetPoint("TOPLEFT", 0, 0)
-texture:SetSize(1, 1)
-texture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
+-- Texture to draw command pixel
+local commandTexture = frame:CreateTexture(nil, "ARTWORK")
+commandTexture:SetPoint("TOPLEFT", 0, 0)
+commandTexture:SetSize(1, 1)
+commandTexture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
+
+-- Texture for sentinel pixel 1
+local sentinelTexture = frame:CreateTexture(nil, "ARTWORK")
+sentinelTexture:SetPoint("TOPLEFT", 1, 0)
+sentinelTexture:SetSize(1, 1)
+sentinelTexture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
+
 local getNextMacro = RestoShaman.getRestoShamanMacro;
 -- Draws a single pixel with given RGB values (0-1 range)
 local function drawPixel(r, g, b)
-    texture:SetVertexColor(r, g, b)
-    frame:SetFrameStrata("HIGH")
+    commandTexture:SetVertexColor(r, g, b)
 end
 
 -- OnUpdate loop to draw the key value as a pixel color
@@ -168,6 +175,8 @@ local function init(msg, editBox)
         DEFAULT_CHAT_FRAME:AddMessage("CLASS NOT SUPPORTED");
     end
     MultiboxConfig:UpdateSpecStatus(CURRENT_SPEC)
+    drawPixel(0, 0, 0)
+    sentinelTexture:SetVertexColor(0x12 / 255, 0x34 / 255, 0x56 / 255)
 end
 
 local function MboxCommandHandler(msg, editBox)
@@ -200,3 +209,4 @@ local function MboxCommandHandler(msg, editBox)
 end
 
 SlashCmdList["MBOX"] = MboxCommandHandler; -- Also a valid assignment strategy
+-- init()

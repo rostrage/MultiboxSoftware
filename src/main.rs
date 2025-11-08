@@ -58,6 +58,11 @@ unsafe impl Send for HwndWrapper {}
 
 const PIXEL_X: i32 = 0;
 const PIXEL_Y: i32 = 0;
+const SENTINEL_X: i32 = 2;
+// In-game addon sets sentinel pixels to check if the addon is active.
+// Lua (r=0x12, g=0x34, b=0x56) -> BGR 0x563412
+const SENTINEL_COLOR: u32 = 0x563412;
+
 
 // Global configuration storage
 static mut CONFIG: Option<Vec<ConfigFile>> = None;
@@ -303,7 +308,7 @@ fn process_window(
                 break;
             }
 
-            let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 1, 1);
+            let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 3, 1);
             if hbm_screen_cap.is_invalid() {
                 let _ = DeleteDC(hdc_mem_dc);
                 ReleaseDC(Some(hwnd), hdc_target);
@@ -318,7 +323,7 @@ fn process_window(
                 hdc_mem_dc,
                 0,
                 0,
-                1,
+                3,
                 1,
                 Some(hdc_target),
                 PIXEL_X,
@@ -334,89 +339,94 @@ fn process_window(
                 continue; // Continue to next iteration
             }
 
-            // Get the pixel color (in BGR format)
-            let actual_color = GetPixel(hdc_mem_dc, 0, 0);
+            // Get sentinel pixel colors
+            let sentinel = GetPixel(hdc_mem_dc, SENTINEL_X, PIXEL_Y);
+            
+            if sentinel.0 == SENTINEL_COLOR {
+                // Get the command pixel color (in BGR format)
+                let actual_color = GetPixel(hdc_mem_dc, PIXEL_X, PIXEL_Y);
 
-            // Extract color components
-            let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
-            let green = ((actual_color.0 >> 8) & 0xFF) as u8;
-            let red = (actual_color.0 & 0xFF) as u8;
+                // Extract color components
+                let blue = ((actual_color.0 >> 16) & 0xFF) as u8;
+                let green = ((actual_color.0 >> 8) & 0xFF) as u8;
+                let red = (actual_color.0 & 0xFF) as u8;
 
-            if blue == 1 && keys_enabled {
-                keys_enabled = false;
-                println!("[{}] Keys disabled", title_string);
-            } else if blue == 2 && !keys_enabled {
-                keys_enabled = true;
-                println!("[{}] Keys enabled", title_string);
-            } else if blue > 2 {
-                if last_swap_time.elapsed() > Duration::from_secs(1) {
-                    let target_omb_num = (blue - 2) as usize;
-                    println!(
-                        "[{}] Received swap command with window {}",
-                        title_string, target_omb_num
-                    );
-                    if let Some(own_num) = own_omb_num {
-                        if own_num != target_omb_num {
-                            let map = window_map.lock().unwrap();
-                            if let Some(&target_hwnd_wrapper) = map.get(&target_omb_num) {
-                                let target_hwnd = target_hwnd_wrapper.0;
-                                let own_hwnd = wrapped.0;
+                if blue == 1 && keys_enabled {
+                    keys_enabled = false;
+                    println!("[{}] Keys disabled", title_string);
+                } else if blue == 2 && !keys_enabled {
+                    keys_enabled = true;
+                    println!("[{}] Keys enabled", title_string);
+                } else if blue > 2 {
+                    if last_swap_time.elapsed() > Duration::from_secs(1) {
+                        let target_omb_num = (blue - 2) as usize;
+                        println!(
+                            "[{}] Received swap command with window {}",
+                            title_string, target_omb_num
+                        );
+                        if let Some(own_num) = own_omb_num {
+                            if own_num != target_omb_num {
+                                let map = window_map.lock().unwrap();
+                                if let Some(&target_hwnd_wrapper) = map.get(&target_omb_num) {
+                                    let target_hwnd = target_hwnd_wrapper.0;
+                                    let own_hwnd = wrapped.0;
 
-                                let mut own_rect = RECT::default();
-                                let mut target_rect = RECT::default();
+                                    let mut own_rect = RECT::default();
+                                    let mut target_rect = RECT::default();
 
-                                if GetWindowRect(own_hwnd, &mut own_rect).is_ok()
-                                    && GetWindowRect(target_hwnd, &mut target_rect).is_ok()
-                                {
-                                    let own_width = own_rect.right - own_rect.left;
-                                    let own_height = own_rect.bottom - own_rect.top;
-                                    let target_width = target_rect.right - target_rect.left;
-                                    let target_height = target_rect.bottom - target_rect.top;
+                                    if GetWindowRect(own_hwnd, &mut own_rect).is_ok()
+                                        && GetWindowRect(target_hwnd, &mut target_rect).is_ok()
+                                    {
+                                        let own_width = own_rect.right - own_rect.left;
+                                        let own_height = own_rect.bottom - own_rect.top;
+                                        let target_width = target_rect.right - target_rect.left;
+                                        let target_height = target_rect.bottom - target_rect.top;
 
-                                    let _ = SetWindowPos(
-                                        own_hwnd,
-                                        None,
-                                        target_rect.left,
-                                        target_rect.top,
-                                        target_width,
-                                        target_height,
-                                        SWP_NOZORDER,
-                                    );
-                                    let _ = SetWindowPos(
-                                        target_hwnd,
-                                        None,
-                                        own_rect.left,
-                                        own_rect.top,
-                                        own_width,
-                                        own_height,
-                                        SWP_NOZORDER,
-                                    );
+                                        let _ = SetWindowPos(
+                                            own_hwnd,
+                                            None,
+                                            target_rect.left,
+                                            target_rect.top,
+                                            target_width,
+                                            target_height,
+                                            SWP_NOZORDER,
+                                        );
+                                        let _ = SetWindowPos(
+                                            target_hwnd,
+                                            None,
+                                            own_rect.left,
+                                            own_rect.top,
+                                            own_width,
+                                            own_height,
+                                            SWP_NOZORDER,
+                                        );
+                                    }
                                 }
                             }
                         }
+                        last_swap_time = Instant::now();
                     }
-                    last_swap_time = Instant::now();
                 }
-            }
 
-            if keys_enabled {
-                let scancode_map = scancode_map_arc.lock().unwrap();
-                if let Some(&scancode) = scancode_map.get(&red) {
-                    send_target_combination(hwnd, green);
-                    let _ = PostMessageW(
-                        Some(hwnd),
-                        WM_KEYDOWN as u32,
-                        WPARAM(scancode.0.into()),
-                        LPARAM(0),
-                    );
-                    sleep(Duration::from_millis(10));
-                    let _ = PostMessageW(
-                        Some(hwnd),
-                        WM_KEYUP as u32,
-                        WPARAM(scancode.0.into()),
-                        LPARAM(0),
-                    );
-                    sleep(Duration::from_millis(100));
+                if keys_enabled {
+                    let scancode_map = scancode_map_arc.lock().unwrap();
+                    if let Some(&scancode) = scancode_map.get(&red) {
+                        send_target_combination(hwnd, green);
+                        let _ = PostMessageW(
+                            Some(hwnd),
+                            WM_KEYDOWN as u32,
+                            WPARAM(scancode.0.into()),
+                            LPARAM(0),
+                        );
+                        sleep(Duration::from_millis(10));
+                        let _ = PostMessageW(
+                            Some(hwnd),
+                            WM_KEYUP as u32,
+                            WPARAM(scancode.0.into()),
+                            LPARAM(0),
+                        );
+                        sleep(Duration::from_millis(100));
+                    }
                 }
             }
 
