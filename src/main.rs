@@ -11,9 +11,11 @@ use windows::{
     core::*,
     Win32::{
         Foundation::{HWND, LPARAM, RECT, WPARAM},
+        Storage::Xps::{PrintWindow,PW_CLIENTONLY},
         Graphics::Gdi::{
-            BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
-            GetPixel, ReleaseDC, SelectObject, SRCCOPY,
+            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC,
+            DeleteObject, GetDC, GetPixel, ReleaseDC,
+            SelectObject,
         },
         UI::{
             Input::KeyboardAndMouse::{
@@ -21,7 +23,7 @@ use windows::{
                 VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
             },
             WindowsAndMessaging::{
-                EnumWindows, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
+                EnumWindows, GetClientRect, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
                 PostMessageW, SetWindowPos, SetWindowTextW, HWND_TOP, SWP_NOZORDER, WM_KEYDOWN,
                 WM_KEYUP,
             },
@@ -58,7 +60,7 @@ unsafe impl Send for HwndWrapper {}
 
 const PIXEL_X: i32 = 0;
 const PIXEL_Y: i32 = 0;
-const SENTINEL_X: i32 = 2;
+const SENTINEL_X: i32 = 1;
 // In-game addon sets sentinel pixels to check if the addon is active.
 // Lua (r=0x12, g=0x34, b=0x56) -> BGR 0x563412
 const SENTINEL_COLOR: u32 = 0x563412;
@@ -174,7 +176,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         // Handle "OMB" prefix windows
         if title_str.starts_with("OMB ") {
             HWNDS.push(hwnd);
-            if(HWND_SET.lock().unwrap().contains(&HwndWrapper(hwnd))) {
+            if (HWND_SET.lock().unwrap().contains(&HwndWrapper(hwnd))) {
                 return windows::core::BOOL::from(true);
             }
             let num_str_opt = title_str
@@ -287,46 +289,52 @@ fn get_window_title_and_omb_number(hwnd: HWND) -> (String, Option<usize>) {
 
 fn capture_pixel_colors(hwnd: HWND) -> Option<(u32, u32)> {
     unsafe {
-        let hdc_target = GetDC(Some(hwnd));
-        if hdc_target.is_invalid() {
+        // Get the window's device context
+        let hdc_window = GetDC(Some(hwnd));
+        if hdc_window.is_invalid() {
             return None;
         }
 
-        let hdc_mem_dc = CreateCompatibleDC(Some(hdc_target));
+        // Create a compatible DC for the memory bitmap
+        let hdc_mem_dc = CreateCompatibleDC(Some(hdc_window));
         if hdc_mem_dc.is_invalid() {
-            ReleaseDC(Some(hwnd), hdc_target);
+            ReleaseDC(Some(hwnd), hdc_window);
             return None;
         }
 
-        let hbm_screen_cap = CreateCompatibleBitmap(hdc_target, 3, 1);
+        // Get client rect to determine size
+        let mut client_rect = RECT::default();
+        if GetClientRect(hwnd, &mut client_rect).is_err() {
+            let _ = DeleteDC(hdc_mem_dc);
+            ReleaseDC(Some(hwnd), hdc_window);
+            return None;
+        }
+
+        let width = client_rect.right - client_rect.left;
+        let height = client_rect.bottom - client_rect.top;
+
+        // Create a bitmap compatible with the window DC
+        // We only need a small area but let's capture a bit more to be safe
+        let capture_width = 10.max(width);
+        let capture_height = 10.max(height);
+
+        let hbm_screen_cap = CreateCompatibleBitmap(hdc_window, capture_width, capture_height);
         if hbm_screen_cap.is_invalid() {
             let _ = DeleteDC(hdc_mem_dc);
-            ReleaseDC(Some(hwnd), hdc_target);
+            ReleaseDC(Some(hwnd), hdc_window);
             return None;
         }
 
         let old_bitmap = SelectObject(hdc_mem_dc, hbm_screen_cap.into());
 
-        if BitBlt(
-            hdc_mem_dc,
-            0,
-            0,
-            3,
-            1,
-            Some(hdc_target),
-            PIXEL_X,
-            PIXEL_Y,
-            SRCCOPY,
-        )
-        .is_err()
-        {
-            SelectObject(hdc_mem_dc, old_bitmap);
-            let _ = DeleteObject(hbm_screen_cap.into());
-            let _ = DeleteDC(hdc_mem_dc);
-            ReleaseDC(Some(hwnd), hdc_target);
-            return None;
+        // Use PrintWindow to capture the window contents directly from the window's
+        // rendering buffer, bypassing DWM composition and scaling
+        // This captures at the game's native resolution
+        if !PrintWindow(hwnd, hdc_mem_dc, PW_CLIENTONLY).as_bool() {
+            println!("PrintWindow failed");
         }
 
+        // Now read the pixels at the game's native coordinates
         let sentinel = GetPixel(hdc_mem_dc, SENTINEL_X, PIXEL_Y).0;
         let command = GetPixel(hdc_mem_dc, PIXEL_X, PIXEL_Y).0;
 
@@ -334,12 +342,11 @@ fn capture_pixel_colors(hwnd: HWND) -> Option<(u32, u32)> {
         SelectObject(hdc_mem_dc, old_bitmap);
         let _ = DeleteObject(hbm_screen_cap.into());
         let _ = DeleteDC(hdc_mem_dc);
-        ReleaseDC(Some(hwnd), hdc_target);
+        ReleaseDC(Some(hwnd), hdc_window);
 
         Some((sentinel, command))
     }
 }
-
 fn handle_key_toggle_command(blue: u8, keys_enabled: &mut bool, title_string: &str) {
     if blue == 1 && *keys_enabled {
         *keys_enabled = false;
@@ -487,10 +494,10 @@ fn process_window(
                     handle_key_press(hwnd, red, green, scancode_map_arc);
                 }
             } else {
-                // println!(
-                //     "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
-                //     title_string, SENTINEL_COLOR, sentinel
-                // );
+                println!(
+                    "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
+                    title_string, SENTINEL_COLOR, sentinel
+                );
             }
         }
 
