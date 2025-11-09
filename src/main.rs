@@ -7,29 +7,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use windows::{
-    core::*,
-    Win32::{
-        Foundation::{HWND, LPARAM, RECT, WPARAM},
-        Storage::Xps::{PrintWindow,PW_CLIENTONLY},
-        Graphics::Gdi::{
-            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC,
-            DeleteObject, GetDC, GetPixel, ReleaseDC,
-            SelectObject,
-        },
-        UI::{
-            Input::KeyboardAndMouse::{
-                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,
-                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
-            },
-            WindowsAndMessaging::{
-                EnumWindows, GetClientRect, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
-                PostMessageW, SetWindowPos, SetWindowTextW, HWND_TOP, SWP_NOZORDER, WM_KEYDOWN,
-                WM_KEYUP,
-            },
-        },
-    },
-};
+use windows::{    core::*,    Win32::{        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},        Graphics::Gdi::{            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel,            ReleaseDC, SelectObject,        },        Storage::Xps::{PrintWindow, PW_CLIENTONLY},        System::LibraryLoader::GetModuleHandleW,        UI::{            Input::KeyboardAndMouse::{                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,            },            WindowsAndMessaging::{                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow,                GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,                KBDLLHOOKSTRUCT, LLKHF_INJECTED, PostMessageW, SetWindowPos, SetWindowTextW,                SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HWND_TOP, MSG,                SWP_NOZORDER, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP,            },        },    },};
 
 // Configuration structs for window positions and sizes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +48,8 @@ static mut CONFIG: Option<Vec<ConfigFile>> = None;
 
 static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
+
+static BROADCAST_ENABLED: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
 // Load configuration from JSON file
 fn load_config() {
@@ -178,7 +158,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         // Handle "OMB" prefix windows
         if title_str.starts_with("OMB ") {
             HWNDS.push(hwnd);
-            if (HWND_SET.lock().unwrap().contains(&HwndWrapper(hwnd))) {
+            if HWND_SET.lock().unwrap().contains(&HwndWrapper(hwnd)) {
                 return windows::core::BOOL::from(true);
             }
             let num_str_opt = title_str
@@ -214,6 +194,37 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
     }
 
     windows::core::BOOL::from(true)
+}
+
+unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+    if n_code >= 0 {
+        let kbd_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
+
+        // Do not broadcast injected keypresses
+        if (kbd_struct.flags.0 & LLKHF_INJECTED.0) != 0 {
+            return CallNextHookEx(None, n_code, w_param, l_param);
+        }
+
+        if *BROADCAST_ENABLED.lock().unwrap() {
+            let foreground_hwnd = GetForegroundWindow();
+            let wow_windows = HWND_SET.lock().unwrap();
+
+            if wow_windows.contains(&HwndWrapper(foreground_hwnd)) {
+                for &window in wow_windows.iter() {
+                    if window.0 != foreground_hwnd {
+                        let _ = PostMessageW(
+                            Some(window.0),
+                            w_param.0 as u32,
+                            WPARAM(kbd_struct.vkCode as usize),
+                            LPARAM(0),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    CallNextHookEx(None, n_code, w_param, l_param)
 }
 
 fn main() {
@@ -267,9 +278,28 @@ fn main() {
         }
     });
 
-    // Keep main thread alive (to prevent early exit)
-    loop {
-        sleep(Duration::from_secs(1));
+    // Keep main thread alive by setting up a message loop for the keyboard hook
+    unsafe {
+        let hook = match SetWindowsHookExW(
+            WH_KEYBOARD_LL,
+            Some(keyboard_hook_proc),
+            GetModuleHandleW(None).ok().map(|h| HINSTANCE(h.0)),
+            0,
+        ) {
+            Ok(h) => h,
+            Err(e) => {
+                println!("Failed to set keyboard hook: {}", e);
+                return;
+            }
+        };
+
+        let mut msg = MSG::default();
+        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+            let _ = TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+
+        let _ = UnhookWindowsHookEx(hook);
     }
 }
 
@@ -357,6 +387,15 @@ fn handle_key_toggle_command(blue: u8, keys_enabled: &mut bool, title_string: &s
         *keys_enabled = true;
         println!("[{}] Keys enabled", title_string);
     }
+
+    let mut broadcast_enabled = BROADCAST_ENABLED.lock().unwrap();
+    if blue == 3 && !*broadcast_enabled {
+        *broadcast_enabled = true;
+        println!("[{}] Broadcast enabled", title_string);
+    } else if blue == 4 && *broadcast_enabled {
+        *broadcast_enabled = false;
+        println!("[{}] Broadcast disabled", title_string);
+    }
 }
 
 fn swap_window_positions(hwnd1: HWND, hwnd2: HWND) {
@@ -404,7 +443,7 @@ fn handle_window_swap(
         return;
     }
 
-    let target_omb_num = (blue - 2) as usize;
+    let target_omb_num = (blue - 4) as usize;
     println!(
         "[{}] Received swap command with window {}",
         title_string, target_omb_num
@@ -480,8 +519,8 @@ fn process_window(
 
                 handle_key_toggle_command(blue, &mut keys_enabled, &title_string);
 
-                // 0 = do nothing, 1 = enable keys, 2 = disable keys, >2 = swap
-                if blue > 2 {
+                // 0 = do nothing, 1/2 = keys, 3/4 = broadcast, >4 = swap
+                if blue > 4 {
                     handle_window_swap(
                         &title_string,
                         own_omb_num,

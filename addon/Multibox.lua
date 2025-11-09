@@ -1,6 +1,7 @@
 SLASH_MBOX1 = '/mbox';
 local controlCommand = 0
 local keysEnabled = true
+local broadcastEnabled = false
 -- Frame for drawing
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetPoint("TOPLEFT", 0, 0)
@@ -192,10 +193,19 @@ local function MboxCommandHandler(msg, editBox)
             controlCommand = 1 -- disable
             DEFAULT_CHAT_FRAME:AddMessage("Keys disabled")
         end
+    elseif cmd == "broadcast" then
+        broadcastEnabled = not broadcastEnabled
+        if broadcastEnabled then
+            controlCommand = 3 -- enable broadcast
+            DEFAULT_CHAT_FRAME:AddMessage("Broadcast enabled")
+        else
+            controlCommand = 4 -- disable broadcast
+            DEFAULT_CHAT_FRAME:AddMessage("Broadcast disabled")
+        end
     elseif cmd == "swap" then
         local target = tonumber(args)
         if target and target > 0 then
-            controlCommand = target + 2
+            controlCommand = target + 4
             DEFAULT_CHAT_FRAME:AddMessage("Signaling swap with window " .. target)
         else
             DEFAULT_CHAT_FRAME:AddMessage("Invalid swap target. Usage: /mbox swap <window_number>")
@@ -204,7 +214,7 @@ local function MboxCommandHandler(msg, editBox)
         init(msg, editBox)
     else
         DEFAULT_CHAT_FRAME:AddMessage("Unknown mbox command: " .. cmd)
-        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|swap <target>]")
+        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|broadcast|swap <target>]")
     end
 end
 
