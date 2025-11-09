@@ -89,6 +89,7 @@ fn find_lowest_omb_number() -> Option<usize> {
         }
         let (title_str, number) = get_window_title_and_omb_number(hwnd.0);
         if title_str.starts_with("OMB ") && Some(number).is_some() {
+            println!("Found used OMB number: {}", title_str);
             used_numbers.insert(number.unwrap());
         }
     }
@@ -177,7 +178,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
             }
         }
         // Handle "World of Warcraft" windows - rename to lowest available OMB number
-        else if title_str.starts_with("World of Warcraft") {
+        else if title_str == "World of Warcraft\0" {
             if let Some(lowest_num) = find_lowest_omb_number() {
                 let new_title = format!("OMB {}", lowest_num);
                 rename_window(hwnd, &new_title);
@@ -205,11 +206,18 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
 
+        // Only handle keydown and keyup events
+        if(w_param.0 as u32 != WM_KEYDOWN && w_param.0 as u32 != WM_KEYUP) {
+            println!("Ignoring non-key event: {}", w_param.0 as u32);
+            return CallNextHookEx(None, n_code, w_param, l_param);
+        }
+
         if *BROADCAST_ENABLED.lock().unwrap() {
             let foreground_hwnd = GetForegroundWindow();
             let wow_windows = HWND_SET.lock().unwrap();
 
             if wow_windows.contains(&HwndWrapper(foreground_hwnd)) {
+                println!{"Broadcasting key {:?} to other windows", kbd_struct.vkCode};
                 for &window in wow_windows.iter() {
                     if window.0 != foreground_hwnd {
                         let _ = PostMessageW(
@@ -535,10 +543,10 @@ fn process_window(
                     handle_key_press(hwnd, red, green, scancode_map_arc);
                 }
             } else {
-                println!(
-                    "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
-                    title_string, SENTINEL_COLOR, sentinel
-                );
+                // println!(
+                //     "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
+                //     title_string, SENTINEL_COLOR, sentinel
+                // );
             }
         }
 

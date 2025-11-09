@@ -94,6 +94,7 @@ end
 
 function Multibox:Init()
     initTargettingKeybinds();
+    MultiboxLFG:Initialize()
     MultiboxGuildBank:Initialize()
     MultiboxFollow:Initialize()
     MultiboxParty:Initialize()
@@ -195,7 +196,6 @@ function Multibox:MboxCommandHandler(msg)
         if target and target > 0 then
             self.controlCommand = target + 4
             DEFAULT_CHAT_FRAME:AddMessage("Signaling swap with window " .. target)
-            self:SendSwap(target)
         else
             DEFAULT_CHAT_FRAME:AddMessage("Invalid swap target. Usage: /mbox swap <window_number>")
         end
@@ -239,12 +239,6 @@ function Multibox:OnCommReceived(prefix, message, distribution, sender)
                 DEFAULT_CHAT_FRAME:AddMessage("Broadcast disabled by " .. sender)
             end
         end
-    elseif command == "swap" then
-        local target = tonumber(value)
-        if target and target > 0 then
-            self.controlCommand = target + 4
-            DEFAULT_CHAT_FRAME:AddMessage("Received swap signal from " .. sender .. " for window " .. target)
-        end
     end
 end
 
@@ -256,12 +250,6 @@ end
 
 function Multibox:SendBroadcast()
     local message = "broadcast " .. tostring(self.broadcastEnabled)
-    self:SendCommMessage(MESSAGE_PREFIX, message, "RAID", nil)
-    self:SendCommMessage(MESSAGE_PREFIX, message, "PARTY", nil)
-end
-
-function Multibox:SendSwap(target)
-    local message = "swap " .. tostring(target)
     self:SendCommMessage(MESSAGE_PREFIX, message, "RAID", nil)
     self:SendCommMessage(MESSAGE_PREFIX, message, "PARTY", nil)
 end

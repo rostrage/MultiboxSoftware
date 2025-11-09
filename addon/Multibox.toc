@@ -23,6 +23,7 @@ specs\HolyPaladin.lua
 specs\ShadowPriest.lua
 Follow.lua
 Guildbank.lua
+LFG.lua
 Party.lua
 Quest.lua
 Config.lua
