@@ -63,11 +63,11 @@ const SENTINEL_X: i32 = 2;
 // Lua (r=0x12, g=0x34, b=0x56) -> BGR 0x563412
 const SENTINEL_COLOR: u32 = 0x563412;
 
-
 // Global configuration storage
 static mut CONFIG: Option<Vec<ConfigFile>> = None;
 
-static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 // Load configuration from JSON file
 fn load_config() {
@@ -106,7 +106,7 @@ fn find_lowest_omb_number() -> Option<usize> {
             }
         }
         let (title_str, number) = get_window_title_and_omb_number(hwnd.0);
-        if title_str.starts_with("OMB ")  && Some(number).is_some() {
+        if title_str.starts_with("OMB ") && Some(number).is_some() {
             used_numbers.insert(number.unwrap());
         }
     }
@@ -174,13 +174,21 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         // Handle "OMB" prefix windows
         if title_str.starts_with("OMB ") {
             HWNDS.push(hwnd);
-
+            if(HWND_SET.lock().unwrap().contains(&HwndWrapper(hwnd))) {
+                return windows::core::BOOL::from(true);
+            }
+            let num_str_opt = title_str
+                .strip_prefix("OMB ")
+                .and_then(|s| s.strip_suffix("\0"));
             // Extract the number from "OMB X" format
-            if let Some(num_str) = title_str[4..].split_whitespace().next() {
+            if let Some(num_str) = num_str_opt {
                 if let Ok(index) = num_str.parse::<usize>() {
                     if let Some(config) = get_window_config(index - 1) {
                         set_window_position(hwnd, config);
                     }
+                } else {
+                    let err = num_str.parse::<usize>();
+                    println!("Failed to parse OMB number from title: {:?}", err);
                 }
             }
         }
@@ -191,7 +199,8 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
                 rename_window(hwnd, &new_title);
 
                 // Apply position configuration for the new OMB number
-                if let Some(config) = get_window_config(lowest_num) {
+                if let Some(config) = get_window_config(lowest_num - 1) {
+                    println!("Applying config for {}", new_title);
                     set_window_position(hwnd, config);
                 }
 
@@ -202,8 +211,6 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
 
     windows::core::BOOL::from(true)
 }
-
-
 
 fn main() {
     // iced::run("A cool counter", Counter::update, Counter::view);
@@ -227,11 +234,9 @@ fn main() {
     scancode_map.insert(0x0C, VK_F12);
 
     let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
-    let window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    let window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // Track currently active HWNDs using our wrapper type
-    
 
     // Start the watcher thread
     std::thread::spawn(move || {
@@ -245,7 +250,6 @@ fn main() {
                 let mut set = HWND_SET.lock().unwrap();
                 let wrapped = HwndWrapper(hwnd);
                 if !set.contains(&wrapped) {
-                    println!("Spawning new handler thread");
                     set.insert(wrapped);
 
                     // Spawn a new thread to handle this HWND
@@ -417,12 +421,7 @@ fn send_keypress(hwnd: HWND, vk: VIRTUAL_KEY) {
             LPARAM(0),
         );
         sleep(Duration::from_millis(10));
-        let _ = PostMessageW(
-            Some(hwnd),
-            WM_KEYUP as u32,
-            WPARAM(vk.0.into()),
-            LPARAM(0),
-        );
+        let _ = PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(vk.0.into()), LPARAM(0));
     }
 }
 
@@ -487,6 +486,11 @@ fn process_window(
                 if keys_enabled {
                     handle_key_press(hwnd, red, green, scancode_map_arc);
                 }
+            } else {
+                // println!(
+                //     "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
+                //     title_string, SENTINEL_COLOR, sentinel
+                // );
             }
         }
 
