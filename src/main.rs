@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
+    sync::{Arc, LazyLock, Mutex},
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -67,6 +67,8 @@ const SENTINEL_COLOR: u32 = 0x563412;
 // Global configuration storage
 static mut CONFIG: Option<Vec<ConfigFile>> = None;
 
+static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+
 // Load configuration from JSON file
 fn load_config() {
     match std::fs::read_to_string("window_config.json") {
@@ -96,18 +98,21 @@ fn get_window_config(index: usize) -> Option<&'static WindowConfig> {
 fn find_lowest_omb_number() -> Option<usize> {
     let mut used_numbers = HashSet::new();
 
-    unsafe {
-        if let Some(ref config) = CONFIG {
-            for config_file in config.iter() {
-                for (i, _) in config_file.positions.iter().enumerate() {
-                    used_numbers.insert(i);
-                }
+    for hwnd in HWND_SET.lock().unwrap().iter() {
+        unsafe {
+            if !IsWindow(Some(hwnd.0)).as_bool() {
+                HWND_SET.lock().unwrap().remove(hwnd);
+                continue;
             }
+        }
+        let (title_str, number) = get_window_title_and_omb_number(hwnd.0);
+        if title_str.starts_with("OMB ")  && Some(number).is_some() {
+            used_numbers.insert(number.unwrap());
         }
     }
 
     // Find the smallest number not in use
-    for i in 0.. {
+    for i in 1.. {
         if !used_numbers.contains(&i) {
             return Some(i);
         }
@@ -182,7 +187,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
         // Handle "World of Warcraft" windows - rename to lowest available OMB number
         else if title_str.starts_with("World of Warcraft") {
             if let Some(lowest_num) = find_lowest_omb_number() {
-                let new_title = format!("OMB {}", lowest_num + 1);
+                let new_title = format!("OMB {}", lowest_num);
                 rename_window(hwnd, &new_title);
 
                 // Apply position configuration for the new OMB number
@@ -226,7 +231,7 @@ fn main() {
         Arc::new(Mutex::new(HashMap::new()));
 
     // Track currently active HWNDs using our wrapper type
-    let hwnd_set: Arc<Mutex<HashSet<HwndWrapper>>> = Arc::new(Mutex::new(HashSet::new()));
+    
 
     // Start the watcher thread
     std::thread::spawn(move || {
@@ -237,7 +242,7 @@ fn main() {
             let hwnds = find_all_windows_with_title();
 
             for &hwnd in &hwnds {
-                let mut set = hwnd_set.lock().unwrap();
+                let mut set = HWND_SET.lock().unwrap();
                 let wrapped = HwndWrapper(hwnd);
                 if !set.contains(&wrapped) {
                     println!("Spawning new handler thread");
