@@ -80,6 +80,14 @@ local function getFeralBearDruidMacro()
     end
     debug(string.format("Condition: Enrage CD=%.1f", enrageStart))
     
+    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitAura("focustarget", "Lacerate", nil, "PLAYER|HARMFUL")
+    local lacerateRemains = (lacerateExpirationTime or 0) - GetTime()
+
+    if (lacerateStacks or 0) == 5 and lacerateRemains <= 5.0 then
+        debug(string.format("ACTION: Lacerate. (Stacks=%d, Duration=%.1f)", lacerateStacks or 0, lacerateRemains or 0))
+        return MacroTypes.LACERATE, 0
+    end
+    
     -- 3. If the Mangle (Bear) is available, return Mangle (Bear)
     local start, duration = getSpellCooldownRemaining("Mangle (Bear)")
     if start <= gcd then
@@ -89,8 +97,7 @@ local function getFeralBearDruidMacro()
     debug(string.format("Condition: Mangle CD=%.1f", start))
     
     -- 4. If the focustarget does not have 5 stacks of Lacerate, return Lacerate
-    local _, _, _, lacerateStacks, _, lacerateDuration, lacerateExpirationTime = UnitAura("focustarget", "Lacerate", nil, "PLAYER|HARMFUL")
-    local lacerateRemains = (lacerateExpirationTime or 0) - GetTime()
+
     if (lacerateStacks or 0) < 5 or lacerateRemains <= 5.0 then
         debug(string.format("ACTION: Lacerate. (Stacks=%d, Duration=%.1f)", lacerateStacks or 0, lacerateRemains or 0))
         return MacroTypes.LACERATE, 0
