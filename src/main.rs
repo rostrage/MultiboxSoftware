@@ -130,8 +130,10 @@ fn set_window_position(hwnd: HWND, config: &WindowConfig) {
             Some(HWND_TOP),
             config.x,
             config.y,
-            config.width,
-            config.height,
+            1280, //currently hardcoded to always match in game resolution of 1280x720
+            720,
+            // config.width,
+            // config.height,
             SWP_NOZORDER,
         );
     }
