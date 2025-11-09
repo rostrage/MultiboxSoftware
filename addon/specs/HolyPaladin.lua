@@ -87,7 +87,7 @@ local function getHolyPaladinMacro()
 
     for i = 1, GetNumRaidMembers() do
         local unit = "raid" .. i
-        if UnitIsPlayer(unit) and UnitInRange(unit) then
+        if UnitIsPlayer(unit) and UnitInRange(unit) and not UnitIsDeadOrGhost(unit) then
             local name = UnitName(unit)
             local health = UnitHealth(unit)
             local maxHealth = UnitHealthMax(unit)
