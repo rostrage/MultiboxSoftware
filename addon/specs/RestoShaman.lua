@@ -97,7 +97,7 @@ local function getRestoShamanMacro()
             end
         end
     end
-    if numtargets > 1 then
+    if numtargets > 2 then
         local start, duration, enabled, modRate = GetSpellCooldown("Riptide")
         if start > 0 and duration > 0 then
             return MacroTypes.CHAIN_HEAL, target
