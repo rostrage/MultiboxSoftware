@@ -51,6 +51,9 @@ static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> =
 
 static BROADCAST_ENABLED: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
+static PRESSED_KEYS: LazyLock<Mutex<HashSet<u32>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
 // Load configuration from JSON file
 fn load_config() {
     match std::fs::read_to_string("window_config.json") {
@@ -200,6 +203,8 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
 unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
     if n_code >= 0 {
         let kbd_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
+        let vk_code = kbd_struct.vkCode;
+        let event_type = w_param.0 as u32;
 
         // Do not broadcast injected keypresses
         if (kbd_struct.flags.0 & LLKHF_INJECTED.0) != 0 {
@@ -207,8 +212,32 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
         }
 
         // Only handle keydown and keyup events
-        if(w_param.0 as u32 != WM_KEYDOWN && w_param.0 as u32 != WM_KEYUP) {
-            println!("Ignoring non-key event: {}", w_param.0 as u32);
+        if event_type != WM_KEYDOWN && event_type != WM_KEYUP {
+            println!("Ignoring non-key event: {}", event_type);
+            return CallNextHookEx(None, n_code, w_param, l_param);
+        }
+
+        // Get current key state
+        let mut pressed_keys = PRESSED_KEYS.lock().unwrap();
+        let is_key_pressed = pressed_keys.contains(&vk_code);
+
+        // Handle key down events
+        if event_type == WM_KEYDOWN {
+            // If key is already pressed, this is a repeat - ignore it
+            if is_key_pressed {
+                println!("Ignoring repeat keydown for key: {}", vk_code);
+                return CallNextHookEx(None, n_code, w_param, l_param);
+            }
+            // Add key to pressed set
+            pressed_keys.insert(vk_code);
+            println!("Key pressed: {}", vk_code);
+        }
+        // Handle key up events
+        else if event_type == WM_KEYUP {
+            // Remove key from pressed set
+            pressed_keys.remove(&vk_code);
+            println!("Key released: {}", vk_code);
+            // for some reason sending a keyup event also emits a keydown event, so we ignore it here
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
 
@@ -217,14 +246,14 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
             let wow_windows = HWND_SET.lock().unwrap();
 
             if wow_windows.contains(&HwndWrapper(foreground_hwnd)) {
-                println!{"Broadcasting key {:?} to other windows", kbd_struct.vkCode};
+                println!("Broadcasting key {} {} to other windows", event_type, vk_code);
                 for &window in wow_windows.iter() {
                     if window.0 != foreground_hwnd {
                         let _ = PostMessageW(
                             Some(window.0),
-                            w_param.0 as u32,
-                            WPARAM(kbd_struct.vkCode as usize),
-                            LPARAM(0),
+                            event_type,
+                            WPARAM(vk_code as usize),
+                            LPARAM(1),
                         );
                     }
                 }
