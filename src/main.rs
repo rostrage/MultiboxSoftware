@@ -225,18 +225,15 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
         if event_type == WM_KEYDOWN {
             // If key is already pressed, this is a repeat - ignore it
             if is_key_pressed {
-                println!("Ignoring repeat keydown for key: {}", vk_code);
                 return CallNextHookEx(None, n_code, w_param, l_param);
             }
             // Add key to pressed set
             pressed_keys.insert(vk_code);
-            println!("Key pressed: {}", vk_code);
         }
         // Handle key up events
         else if event_type == WM_KEYUP {
             // Remove key from pressed set
             pressed_keys.remove(&vk_code);
-            println!("Key released: {}", vk_code);
             // for some reason sending a keyup event also emits a keydown event, so we ignore it here
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
@@ -246,7 +243,6 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
             let wow_windows = HWND_SET.lock().unwrap();
 
             if wow_windows.contains(&HwndWrapper(foreground_hwnd)) {
-                println!("Broadcasting key {} {} to other windows", event_type, vk_code);
                 for &window in wow_windows.iter() {
                     if window.0 != foreground_hwnd {
                         let _ = PostMessageW(
