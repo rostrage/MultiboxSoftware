@@ -51,9 +51,6 @@ static HWND_SET: LazyLock<Mutex<HashSet<HwndWrapper>>> =
 
 static BROADCAST_ENABLED: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
-static PRESSED_KEYS: LazyLock<Mutex<HashSet<u32>>> =
-    LazyLock::new(|| Mutex::new(HashSet::new()));
-
 // Load configuration from JSON file
 fn load_config() {
     match std::fs::read_to_string("window_config.json") {
@@ -217,27 +214,6 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
 
-        // Get current key state
-        let mut pressed_keys = PRESSED_KEYS.lock().unwrap();
-        let is_key_pressed = pressed_keys.contains(&vk_code);
-
-        // Handle key down events
-        if event_type == WM_KEYDOWN {
-            // If key is already pressed, this is a repeat - ignore it
-            if is_key_pressed {
-                return CallNextHookEx(None, n_code, w_param, l_param);
-            }
-            // Add key to pressed set
-            pressed_keys.insert(vk_code);
-        }
-        // Handle key up events
-        else if event_type == WM_KEYUP {
-            // Remove key from pressed set
-            pressed_keys.remove(&vk_code);
-            // for some reason sending a keyup event also emits a keydown event, so we ignore it here
-            return CallNextHookEx(None, n_code, w_param, l_param);
-        }
-
         if *BROADCAST_ENABLED.lock().unwrap() {
             let foreground_hwnd = GetForegroundWindow();
             let wow_windows = HWND_SET.lock().unwrap();
@@ -245,11 +221,21 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
             if wow_windows.contains(&HwndWrapper(foreground_hwnd)) {
                 for &window in wow_windows.iter() {
                     if window.0 != foreground_hwnd {
+                        println!(
+                            "Broadcasting key {}, event {} to window {:?}",
+                            vk_code, event_type, window.0
+                        );
+                        let mut l_param = 1;
+                        if(event_type == WM_KEYUP) {
+                            // Key up lParam needs to have the 0xC0000000 flag set
+                            // see https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-keyup
+                            l_param = l_param | 0xC0000000;
+                        }
                         let _ = PostMessageW(
                             Some(window.0),
                             event_type,
                             WPARAM(vk_code as usize),
-                            LPARAM(1),
+                            LPARAM(l_param),
                         );
                     }
                 }
