@@ -199,11 +199,13 @@ function Multibox:MboxCommandHandler(msg)
         else
             DEFAULT_CHAT_FRAME:AddMessage("Invalid swap target. Usage: /mbox swap <window_number>")
         end
+    elseif cmd == "follow" then
+        MultiboxFollow.SetFollowTarget(args)
     elseif cmd == "" then
         self:Init()
     else
         DEFAULT_CHAT_FRAME:AddMessage("Unknown mbox command: " .. cmd)
-        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|broadcast|swap <target>]")
+        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|broadcast|swap <target>|follow <target>]")
     end
 end
 
