@@ -91,7 +91,7 @@ local function getHolyPaladinMacro()
 
     -- 4. Cast Judgement of Light on focustarget when off cooldown
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
-    if judgementCooldown <= 0.2 then
+    if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") then
         debug("ACTION: Judgement of Light. (Available)")
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
@@ -109,7 +109,7 @@ local function getHolyPaladinMacro()
             local maxHealth = UnitHealthMax(unit)
             local percent = health / maxHealth
             if percent < lowestPercent then
-                if not lastHealOnTarget[name] or GetTime() > lastHealOnTarget[name] + 2.5 then
+                if percent < 0.5 or not lastHealOnTarget[name] or GetTime() > lastHealOnTarget[name] + 2.5 then
                     lowestPercent = percent
                     if name ~= focusName then -- Skip the focus target
                         targetIndex = i
