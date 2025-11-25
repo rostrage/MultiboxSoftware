@@ -1,4 +1,23 @@
 -- Define named constants for macro types (simulating enums)
+
+local lastHealOnTarget = {}
+
+local function onUnitSpellcastSent(self, event, unit, spellName, _, targetName)
+    if unit == "player" and targetName then
+        if spellName == "Chain Heal" or spellName == "Lesser Healing Wave" or spellName == "Riptide" then
+            lastHealOnTarget[targetName] = GetTime()
+        end
+    end
+end
+
+local function ensureAuraFrame()
+    if _G.RestoShamanAuraFrame then return end
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("UNIT_SPELLCAST_SENT")
+    f:SetScript("OnEvent", onUnitSpellcastSent)
+    _G.RestoShamanAuraFrame = f
+end
+
 local MacroTypes = {
     DOING_NOTHING = 0,
     WATER_SHIELD = 1,
@@ -59,8 +78,10 @@ local function getRestoShamanMacro()
                 if percent < 0.95 then
                     numtargets = numtargets + 1
                     if percent < targetPercent then
-                        targetPercent = percent
-                        target = i
+                        if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.5 then
+                            targetPercent = percent
+                            target = i
+                        end
                     end
                 end
             end
@@ -74,8 +95,10 @@ local function getRestoShamanMacro()
             if percent < 0.95 then
                 numtargets = numtargets + 1
                 if percent < targetPercent then
-                    targetPercent = percent
-                    target = 5
+                    if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.5 then
+                        targetPercent = percent
+                        target = 5
+                    end
                 end
             end
         end
@@ -90,8 +113,10 @@ local function getRestoShamanMacro()
                 if percent < 0.95 then
                     numtargets = numtargets + 1
                     if percent < targetPercent then
-                        targetPercent = percent
-                        target = i
+                        if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.5 then
+                            targetPercent = percent
+                            target = i
+                        end
                     end
                 end
             end
@@ -124,7 +149,8 @@ local function initRestoShamanKeybinds()
         [MacroTypes.EARTH_SHIELD_FOCUS] = "F3",
         [MacroTypes.CHAIN_HEAL] = "F4",
         [MacroTypes.LESSER_HEALING_WAVE] = "F5",
-        [MacroTypes.RIPTIDE] = "F6"
+        [MacroTypes.RIPTIDE] = "F6",
+        [MacroTypes.DOING_NOTHING] = "F7"
     }
 
     for key, binding in pairs(macroKeys) do
@@ -139,6 +165,7 @@ local function initRestoShamanKeybinds()
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
     end
+    ensureAuraFrame()
 end
 
 -- Return module exports

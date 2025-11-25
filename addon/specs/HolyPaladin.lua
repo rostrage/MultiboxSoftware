@@ -27,6 +27,22 @@ local function debug(msg)
 end
 -- ============================
 
+local lastHealOnTarget = {}
+
+local function onUnitSpellcastSent(self, event, unit, spellName, _, targetName)
+    if unit == "player" and spellName == "Holy Light" and targetName then
+        lastHealOnTarget[targetName] = GetTime()
+    end
+end
+
+local function ensureAuraFrame()
+    if _G.HolyPaladinAuraFrame then return end
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("UNIT_SPELLCAST_SENT")
+    f:SetScript("OnEvent", onUnitSpellcastSent)
+    _G.HolyPaladinAuraFrame = f
+end
+
 local function getSpellCooldownRemaining(spellName)
     local startTime, duration, _ = GetSpellCooldown(spellName)
     if startTime and startTime > 0 then
@@ -93,9 +109,11 @@ local function getHolyPaladinMacro()
             local maxHealth = UnitHealthMax(unit)
             local percent = health / maxHealth
             if percent < lowestPercent then
-                lowestPercent = percent
-                if name ~= focusName then -- Skip the focus target
-                    targetIndex = i
+                if not lastHealOnTarget[name] or GetTime() > lastHealOnTarget[name] + 2.5 then
+                    lowestPercent = percent
+                    if name ~= focusName then -- Skip the focus target
+                        targetIndex = i
+                    end
                 end
             end
         end
@@ -143,6 +161,7 @@ local function initHolyPaladinKeybinds()
         SetBindingClick(binding, buttonName)
         button:SetAttribute("macrotext", macroText)
     end
+    ensureAuraFrame()
 end
 
 -- Return module exports
