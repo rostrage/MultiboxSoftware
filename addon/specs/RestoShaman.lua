@@ -26,17 +26,19 @@ local MacroTypes = {
     CHAIN_HEAL = 4,
     LESSER_HEALING_WAVE = 5,
     RIPTIDE = 6,
+    STOP_CASTING = 7
 }
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
+    [MacroTypes.DOING_NOTHING] = "/stopcasting",
     [MacroTypes.WATER_SHIELD] = "/cast Water Shield",
     [MacroTypes.EARTHLIVING_WEAPON] = "/cast Earthliving Weapon",
     [MacroTypes.EARTH_SHIELD_FOCUS] = "/cast [target=focus] Earth Shield",
     [MacroTypes.CHAIN_HEAL] = "/cast Chain Heal",
     [MacroTypes.LESSER_HEALING_WAVE] = "/cast Lesser Healing Wave",
     [MacroTypes.RIPTIDE] = "/cast Riptide",
-    [MacroTypes.DOING_NOTHING] = "/stopcasting"
+    [MacroTypes.STOP_CASTING] = "/stopcasting"
 }
 
 -- Function to return a tuple (key, target) based on current conditions
@@ -137,7 +139,7 @@ local function getRestoShamanMacro()
             return MacroTypes.RIPTIDE, target
         end
     else
-        return MacroTypes.DOING_NOTHING, 0
+        return MacroTypes.STOP_CASTING, 0
     end
 end
 
@@ -150,7 +152,7 @@ local function initRestoShamanKeybinds()
         [MacroTypes.CHAIN_HEAL] = "F4",
         [MacroTypes.LESSER_HEALING_WAVE] = "F5",
         [MacroTypes.RIPTIDE] = "F6",
-        [MacroTypes.DOING_NOTHING] = "F7"
+        [MacroTypes.STOP_CASTING] = "F7"
     }
 
     for key, binding in pairs(macroKeys) do

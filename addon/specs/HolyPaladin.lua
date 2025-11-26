@@ -5,17 +5,19 @@ local MacroTypes = {
     SACRED_SHIELD = 2,
     DIVINE_PLEA = 3,
     JUDGEMENT_OF_LIGHT = 4,
-    HOLY_LIGHT = 5
+    HOLY_LIGHT = 5,
+    STOP_CASTING = 6
 }
 
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
+    [MacroTypes.DOING_NOTHING] = "/stopcasting",
     [MacroTypes.BEACON_OF_LIGHT] = "/cast [target=focus] Beacon of Light",
     [MacroTypes.SACRED_SHIELD] = "/cast [target=focus] Sacred Shield",
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
-    [MacroTypes.DOING_NOTHING] = "/stopcasting"
+    [MacroTypes.STOP_CASTING] = "/stopcasting"
 }
 
 -- ========= DEBUG FLAG =========
@@ -133,7 +135,7 @@ local function getHolyPaladinMacro()
             return MacroTypes.HOLY_LIGHT, targetIndex
         else
             debug("ACTION: Doing nothing. (No targets need healing)")
-            return MacroTypes.DOING_NOTHING, 0
+            return MacroTypes.STOP_CASTING, 0
         end
     end
 end
@@ -146,7 +148,7 @@ local function initHolyPaladinKeybinds()
         [MacroTypes.DIVINE_PLEA] = "F3",
         [MacroTypes.JUDGEMENT_OF_LIGHT] = "F4",
         [MacroTypes.HOLY_LIGHT] = "F5",
-        [MacroTypes.DOING_NOTHING] = "F6"
+        [MacroTypes.STOP_CASTING] = "F6"
     }
 
     for key, binding in pairs(macroKeys) do
