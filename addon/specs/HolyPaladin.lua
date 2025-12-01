@@ -22,7 +22,7 @@ local macroMap = {
 }
 
 -- ========= DEBUG FLAG =========
-local isDebug = true
+local isDebug = false
 local function debug(msg)
     if isDebug then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[HolyPaladin]|r " .. msg)
@@ -63,7 +63,7 @@ local function getHolyPaladinMacro()
     -- 1. Use Divine Plea when mana is low and off cooldown
     local currentMana = UnitPower("player", 0)
     local maxMana = UnitPowerMax("player", 0)
-    if currentMana < maxMana * 0.75 then
+    if currentMana < maxMana * 0.9 then
         local divinePleaCooldown = getSpellCooldownRemaining("Divine Plea")
         if divinePleaCooldown <= 0.2 then
             debug("ACTION: Divine Plea. (Available)")
