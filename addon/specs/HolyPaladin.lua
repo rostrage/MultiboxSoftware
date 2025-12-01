@@ -17,7 +17,8 @@ local macroMap = {
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
-    [MacroTypes.STOP_CASTING] = "/stopcasting"
+    [MacroTypes.STOP_CASTING] = [[/stopcasting
+/assist focus]]
 }
 
 -- ========= DEBUG FLAG =========
@@ -102,25 +103,63 @@ local function getHolyPaladinMacro()
     -- 5. Loop through raid members and find lowest HP non-focus target
     local targetIndex = 0
     local lowestPercent = 1.0
-
-    for i = 1, GetNumRaidMembers() do
-        local unit = "raid" .. i
-        if UnitIsPlayer(unit) and UnitInRange(unit) and not UnitIsDeadOrGhost(unit) then
-            local name = UnitName(unit)
-            local health = UnitHealth(unit)
-            local maxHealth = UnitHealthMax(unit)
+    local raidmembers = GetNumRaidMembers()
+    if raidmembers == 0 then
+        for i = 1, 4 do
+            local u = GetUnitName("party" .. i)
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) then
+                local health = UnitHealth(u)
+                local maxHealth = UnitHealthMax(u)
+                local percent = health / maxHealth
+                local name = UnitName(unit)
+                if percent < 0.95 then
+                    if percent < lowestPercent then
+                        if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.0 or targetIndex == 0 then
+                            lowestPercent = percent
+                            if name ~= focusName then -- Skip the focus target
+                                targetIndex = i
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        local u = GetUnitName("player")
+        if UnitIsPlayer(u) and UnitInRange(u) then
+            local health = UnitHealth(u)
+            local maxHealth = UnitHealthMax(u)
             local percent = health / maxHealth
-            if percent < lowestPercent then
-                if percent < 0.5 or not lastHealOnTarget[name] or GetTime() > lastHealOnTarget[name] + 2.5 then
-                    lowestPercent = percent
-                    if name ~= focusName then -- Skip the focus target
-                        targetIndex = i
+
+            if percent < 0.95 then
+                if percent < lowestPercent then
+                    if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.0 or targetIndex == 0 then
+                        lowestPercent = percent
+                        if name ~= focusName then -- Skip the focus target
+                            targetIndex = 5
+                        end
+                    end
+                end
+            end
+        end
+        else 
+        for i = 1, raidmembers do
+            local unit = "raid" .. i
+            if UnitIsPlayer(unit) and UnitInRange(unit) and not UnitIsDeadOrGhost(unit) then
+                local name = UnitName(unit)
+                local health = UnitHealth(unit)
+                local maxHealth = UnitHealthMax(unit)
+                local percent = health / maxHealth
+                if percent < lowestPercent then
+                    if percent < 0.5 or not lastHealOnTarget[name] or GetTime() > lastHealOnTarget[name] + 2.0 or targetIndex == 0 then
+                        lowestPercent = percent
+                        if name ~= focusName then -- Skip the focus target
+                            targetIndex = i
+                        end
                     end
                 end
             end
         end
     end
-
     if lowestPercent < 1.0 then
         debug(string.format("ACTION: Holy Light. (Target %d at %.1f%% health)", targetIndex, lowestPercent * 100))
         return MacroTypes.HOLY_LIGHT, targetIndex
