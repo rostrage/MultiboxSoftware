@@ -38,7 +38,8 @@ local macroMap = {
     [MacroTypes.CHAIN_HEAL] = "/cast Chain Heal",
     [MacroTypes.LESSER_HEALING_WAVE] = "/cast Lesser Healing Wave",
     [MacroTypes.RIPTIDE] = "/cast Riptide",
-    [MacroTypes.STOP_CASTING] = "/stopcasting"
+    [MacroTypes.STOP_CASTING] = [[/stopcasting
+/assist focus]]
 }
 
 -- Function to return a tuple (key, target) based on current conditions
