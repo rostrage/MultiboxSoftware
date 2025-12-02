@@ -17,8 +17,9 @@ local macroMap = {
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
-    [MacroTypes.STOP_CASTING] = [[/stopcasting
-/assist focus]]
+    [MacroTypes.STOP_CASTING] = [[/stopcasting;
+/assist focus;
+/startattack]]
 }
 
 -- ========= DEBUG FLAG =========

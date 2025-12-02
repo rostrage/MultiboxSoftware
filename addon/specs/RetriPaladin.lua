@@ -22,16 +22,22 @@ RetriPaladinDB = RetriPaladinDB or {
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
     [MacroTypes.JUDGEMENT] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Judgement of Light]],
     [MacroTypes.DIVINE_STORM] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Divine Storm]],
     [MacroTypes.CRUSADER_STRIKE] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Crusader Strike]],
     [MacroTypes.HAMMER_OF_WRATH] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Hammer of Wrath]],
     [MacroTypes.CONSECRATION] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Consecration]],
     [MacroTypes.EXORCISM] = [[/use 10;
+/startattack;
 /cast [target=focustarget] Exorcism]],
     [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
     [MacroTypes.AVENGING_WRATH] = "/cast Avenging Wrath",
