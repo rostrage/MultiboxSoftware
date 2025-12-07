@@ -7,7 +7,31 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use windows::{    core::*,    Win32::{        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},        Graphics::Gdi::{            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel,            ReleaseDC, SelectObject,        },        Storage::Xps::{PrintWindow, PW_CLIENTONLY},        System::LibraryLoader::GetModuleHandleW,        UI::{            Input::KeyboardAndMouse::{                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,            },            WindowsAndMessaging::{                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow,                GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,                KBDLLHOOKSTRUCT, LLKHF_INJECTED, PostMessageW, SetWindowPos, SetWindowTextW,                SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HWND_TOP, MSG,                SWP_NOZORDER, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP,            },        },    },};
+use windows::{
+    core::*,
+    Win32::{
+        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
+        Graphics::Gdi::{
+            CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel,
+            ReleaseDC, SelectObject,
+        },
+        Storage::Xps::{PrintWindow, PW_CLIENTONLY},
+        System::LibraryLoader::GetModuleHandleW,
+        UI::{
+            Input::KeyboardAndMouse::{
+                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,
+                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
+            },
+            WindowsAndMessaging::{
+                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow,
+                GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
+                PostMessageW, SetWindowPos, SetWindowTextW, SetWindowsHookExW, TranslateMessage,
+                UnhookWindowsHookEx, HWND_TOP, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG, SWP_NOZORDER,
+                WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP,
+            },
+        },
+    },
+};
 
 // Configuration structs for window positions and sizes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,7 +221,11 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, _: LPARAM) -> BOOL {
     windows::core::BOOL::from(true)
 }
 
-unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+unsafe extern "system" fn keyboard_hook_proc(
+    n_code: i32,
+    w_param: WPARAM,
+    l_param: LPARAM,
+) -> LRESULT {
     if n_code >= 0 {
         let kbd_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
         let vk_code = kbd_struct.vkCode;
@@ -210,7 +238,7 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
 
         // Only handle keydown and keyup events
         if event_type != WM_KEYDOWN && event_type != WM_KEYUP {
-            println!("Ignoring non-key event: {}", event_type);
+            // println!("Ignoring non-key event: {}", event_type);
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
 
@@ -226,7 +254,7 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
                             vk_code, event_type, window.0
                         );
                         let mut l_param = 1;
-                        if(event_type == WM_KEYUP) {
+                        if (event_type == WM_KEYUP) {
                             // Key up lParam needs to have the 0xC0000000 flag set
                             // see https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-keyup
                             l_param = l_param | 0xC0000000;
@@ -588,7 +616,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         3 => Some(VK_LMENU),
         _ => None,
     };
-
+  
     // Calculate numpad key (0-9)
     let numpad_key: usize = <u16 as Into<usize>>::into(VK_NUMPAD0.0) + (numpad_index as usize);
     unsafe {
