@@ -58,7 +58,7 @@ local function getRestoShamanMacro()
     end
 
     local focusName, _ = UnitName("focus")
-    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy(u) then
+    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player", "focus") then
         return MacroTypes.EARTH_SHIELD_FOCUS, 0
     end
 

@@ -142,7 +142,7 @@ local function getBalanceDruidMacro()
         for i = 1, raidmembers do
             local u = "raid" .. i
             -- cyclone lasts 6 seconds
-            if UnitIsEnemy(u) and not UnitAura(u, "Cyclone", nil, "PLAYER|HARMFUL") and GetTime() > lastCycloneTime + 6 then
+            if UnitIsEnemy("player", u) and not UnitAura(u, "Cyclone", nil, "PLAYER|HARMFUL") and GetTime() > lastCycloneTime + 6 then
                 local name = UnitName(u)
                 debug(string.format("Cyclone mind control: %s", name))
                 return MacroTypes.CYCLONE, i
