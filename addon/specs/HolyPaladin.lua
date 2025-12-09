@@ -80,14 +80,14 @@ local function getHolyPaladinMacro()
     debug("---------- New Rotation Tick ----------")
 
     -- 2. Cast Beacon of Light if not already on focus
-    if not UnitAura("focus", "Beacon of Light", nil , "PLAYER") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") then
+    if not UnitAura("focus", "Beacon of Light", nil , "PLAYER") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy(u) then
         debug("ACTION: Beacon of Light. (Not on focus)")
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
     debug("Condition: Beacon of Light is on focus.")
 
     -- 3. Cast Sacred Shield if not already on focus
-    if not UnitBuff("focus", "Sacred Shield") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") then
+    if not UnitBuff("focus", "Sacred Shield") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy(u) then
         debug("ACTION: Sacred Shield. (Not on focus)")
         return MacroTypes.SACRED_SHIELD, 0
     end
@@ -108,7 +108,7 @@ local function getHolyPaladinMacro()
     if raidmembers == 0 then
         for i = 1, 4 do
             local u = GetUnitName("party" .. i)
-            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) then
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) and not UnitIsEnemy(u) then
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth

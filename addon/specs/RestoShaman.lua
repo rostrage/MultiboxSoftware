@@ -58,7 +58,7 @@ local function getRestoShamanMacro()
     end
 
     local focusName, _ = UnitName("focus")
-    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") and not UnitIsDeadOrGhost("focus") then
+    if focusName and UnitInRange("focus") and not UnitBuff("focus", "Earth Shield") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy(u) then
         return MacroTypes.EARTH_SHIELD_FOCUS, 0
     end
 
@@ -73,7 +73,7 @@ local function getRestoShamanMacro()
     if raidmembers == 0 then
         for i = 1, 4 do
             local u = GetUnitName("party" .. i)
-            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) then
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) and not UnitIsEnemy(u) then
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
