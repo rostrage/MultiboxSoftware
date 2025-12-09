@@ -138,7 +138,7 @@ local function getBalanceDruidMacro()
     debug("---------- New Rotation Tick ----------")
     
     local raidmembers = GetNumRaidMembers()
-    if raidmembers == 0 then
+    if raidmembers ~= 0 then
         for i = 1, raidmembers do
             local u = "raid" .. i
             -- cyclone lasts 6 seconds
