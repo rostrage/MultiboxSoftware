@@ -112,7 +112,7 @@ local function getHolyPaladinMacro()
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
-                local name = UnitName(unit)
+                local name = UnitName(u)
                 if percent < 0.95 then
                     if percent < lowestPercent then
                         if not lastHealOnTarget[u] or GetTime() > lastHealOnTarget[u] + 2.0 or targetIndex == 0 then

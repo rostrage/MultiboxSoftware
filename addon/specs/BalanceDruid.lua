@@ -9,6 +9,7 @@ local MacroTypes = {
     STARFIRE = 6,
     WRATH = 7,
     MOONKIN_FORM = 8,
+    CYCLONE = 9,
 }
 
 -- Map of macro strings for each action
@@ -23,10 +24,13 @@ local macroMap = {
     [MacroTypes.WRATH] = "/cast [target=focustarget] Wrath",
     [MacroTypes.DOING_NOTHING] = "/stopcasting",
     [MacroTypes.MOONKIN_FORM] = "/cast Moonkin Form",
+    [MacroTypes.CYCLONE] = "/cast Cyclone",
 }
 
+local lastCycloneTime = 0
+
 -- ========= DEBUG FLAG =========
-local isDebug = true
+local isDebug = false
 local function debug(msg)
     if isDebug then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[BalanceDruid]|r " .. msg)
@@ -41,6 +45,13 @@ local lunarEclipseActive = false
 local lunarEclipseAppliedAt = nil
 local solarEclipseActive = false
 local solarEclipseAppliedAt = nil
+
+-- Used to debounce Vampiric Touch applications
+local function onUnitSpellcastStart(self, event, unitTarget, spellName, spellRank)
+    if spellName == "Cyclone" then
+        lastCycloneTime = GetTime()
+    end
+end
 
 local function onUnitAura(self, event, unit)
     if unit ~= "player" then return end
@@ -125,6 +136,19 @@ local function getBalanceDruidMacro()
     end
     
     debug("---------- New Rotation Tick ----------")
+    
+    local raidmembers = GetNumRaidMembers()
+    if raidmembers == 0 then
+        for i = 1, raidmembers do
+            local u = "raid" .. i
+            -- cyclone lasts 6 seconds
+            if UnitIsEnemy(u) and not UnitAura(u, "Cyclone", nil, "PLAYER|HARMFUL") and GetTime() > lastCycloneTime + 6 then
+                local name = UnitName(u)
+                debug(string.format("Cyclone mind control: %s", name))
+                return MacroTypes.CYCLONE, i
+            end
+        end
+    end
     local gcd = getSpellCooldownRemaining("Moonfire")
 
     if not UnitBuff("player", "Moonkin Form") then
@@ -190,6 +214,7 @@ local function initBalanceDruidKeybinds()
         [MacroTypes.STARFIRE] = "F6",
         [MacroTypes.WRATH] = "F7",
         [MacroTypes.MOONKIN_FORM] = "F8",
+        [MacroTypes.CYCLONE] = "F9",
     }
 
     for key, binding in pairs(macroKeys) do
