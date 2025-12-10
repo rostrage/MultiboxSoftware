@@ -103,18 +103,31 @@ fn get_window_config(index: usize) -> Option<&'static WindowConfig> {
 // Find the lowest available OMB number
 fn find_lowest_omb_number() -> Option<usize> {
     let mut used_numbers = HashSet::new();
+    let mut to_remove = Vec::new();
 
-    for hwnd in HWND_SET.lock().unwrap().iter() {
-        unsafe {
-            if !IsWindow(Some(hwnd.0)).as_bool() {
-                HWND_SET.lock().unwrap().remove(hwnd);
-                continue;
+    // Scope the lock to avoid deadlock when removing
+    {
+        let set = HWND_SET.lock().unwrap();
+        for hwnd in set.iter() {
+            unsafe {
+                if !IsWindow(Some(hwnd.0)).as_bool() {
+                    to_remove.push(*hwnd);
+                    continue;
+                }
+            }
+            let (title_str, number) = get_window_title_and_omb_number(hwnd.0);
+            if title_str.starts_with("OMB ") && Some(number).is_some() {
+                println!("Found used OMB number: {}", title_str);
+                used_numbers.insert(number.unwrap());
             }
         }
-        let (title_str, number) = get_window_title_and_omb_number(hwnd.0);
-        if title_str.starts_with("OMB ") && Some(number).is_some() {
-            println!("Found used OMB number: {}", title_str);
-            used_numbers.insert(number.unwrap());
+    } // Lock released here
+
+    // Remove dead windows safely
+    if !to_remove.is_empty() {
+        let mut set = HWND_SET.lock().unwrap();
+        for hwnd in to_remove {
+            set.remove(&hwnd);
         }
     }
 
@@ -317,8 +330,9 @@ fn main() {
                     // Spawn a new thread to handle this HWND
                     let scancode_arc_clone = Arc::clone(&scancode_map_arc);
                     let window_map_clone = Arc::clone(&window_map);
+                    
                     std::thread::spawn(move || {
-                        process_window(wrapped, &scancode_arc_clone, &window_map_clone)
+                        process_window(wrapped, scancode_arc_clone, window_map_clone)
                     });
                 }
             }
@@ -537,8 +551,8 @@ fn handle_key_press(
 // Process a single HWND
 fn process_window(
     wrapped: HwndWrapper,
-    scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
-    window_map: &Arc<Mutex<HashMap<usize, HwndWrapper>>>,
+    scancode_map_arc: Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
+    window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>>,
 ) {
     let hwnd = wrapped.0;
     let mut keys_enabled = true;
@@ -574,12 +588,12 @@ fn process_window(
                         wrapped,
                         blue,
                         &mut last_swap_time,
-                        window_map,
+                        &window_map,
                     );
                 }
 
                 if keys_enabled {
-                    handle_key_press(hwnd, red, green, scancode_map_arc);
+                    handle_key_press(hwnd, red, green, &scancode_map_arc);
                 }
             } else {
                 // println!(
