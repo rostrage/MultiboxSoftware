@@ -108,7 +108,7 @@ local function getHolyPaladinMacro()
     if raidmembers == 0 then
         for i = 1, 4 do
             local u = GetUnitName("party" .. i)
-            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) and not UnitIsEnemy(u) then
+            if UnitIsPlayer(u) and UnitInRange(u) and not UnitIsDeadOrGhost(u) and not UnitIsEnemy("player", u) then
                 local health = UnitHealth(u)
                 local maxHealth = UnitHealthMax(u)
                 local percent = health / maxHealth
@@ -142,10 +142,10 @@ local function getHolyPaladinMacro()
                 end
             end
         end
-        else 
+    else 
         for i = 1, raidmembers do
             local unit = "raid" .. i
-            if UnitIsPlayer(unit) and UnitInRange(unit) and not UnitIsDeadOrGhost(unit) then
+            if UnitIsPlayer(unit) and UnitInRange(unit) and not UnitIsDeadOrGhost(unit) and not UnitIsEnemy("player", unit) then
                 local name = UnitName(unit)
                 local health = UnitHealth(unit)
                 local maxHealth = UnitHealthMax(unit)
