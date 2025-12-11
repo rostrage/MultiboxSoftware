@@ -37,7 +37,8 @@ local MacroTypes = {
     RIPTIDE = 6,
     STOP_CASTING = 7,
     CLEANSE_SPIRIT = 8,
-    CALL_OF_THE_ELEMENTS = 9
+    CALL_OF_THE_ELEMENTS = 9,
+    MANA_TIDE_TOTEM = 10
 }
 
 -- Debuffs that should not be instantly dispelled
@@ -68,7 +69,8 @@ local macroMap = {
 /assist focus
 /startattack]],
     [MacroTypes.CLEANSE_SPIRIT] = "/cast Cleanse Spirit",
-    [MacroTypes.CALL_OF_THE_ELEMENTS] = "/cast Call of the Elements"
+    [MacroTypes.CALL_OF_THE_ELEMENTS] = "/cast Call of the Elements",
+    [MacroTypes.MANA_TIDE_TOTEM] = "/cast Mana Tide Totem"
 }
 
 -- Function to return a tuple (key, target) based on current conditions
@@ -106,6 +108,16 @@ local function getRestoShamanMacro()
     if totemName == "" then
         debug("ACTION: Call of the Elements. (Missing Totem)")
         return MacroTypes.CALL_OF_THE_ELEMENTS, 0
+    end
+
+    local currentMana = UnitPower("player", 0)
+    local maxMana = UnitPowerMax("player", 0)
+    if currentMana < maxMana * 0.7 then
+        local manaTideCooldown = getSpellCooldownRemaining("Mana Tide Totem")
+        if manaTideCooldown <= 0.2 then
+            debug("ACTION: Mana Tide. (Available)")
+            return MacroTypes.MANA_TIDE_TOTEM, 0
+        end
     end
 
     local numtargets = 0
@@ -221,7 +233,8 @@ local function initRestoShamanKeybinds()
         [MacroTypes.RIPTIDE] = "F6",
         [MacroTypes.STOP_CASTING] = "F7",
         [MacroTypes.CLEANSE_SPIRIT] = "F8",
-        [MacroTypes.CALL_OF_THE_ELEMENTS] = "F9"
+        [MacroTypes.CALL_OF_THE_ELEMENTS] = "F9",
+        [MacroTypes.MANA_TIDE_TOTEM] = "F10"
     }
 
     for key, binding in pairs(macroKeys) do

@@ -76,8 +76,14 @@ local function getHolyPaladinMacro()
     if not UnitAffectingCombat("focus")  then
         return MacroTypes.DOING_NOTHING, 0
     end
-    
+
     debug("---------- New Rotation Tick ----------")
+
+        -- 1191 mana cost for Holy Light at level 80
+    if currentMana < 1191 then
+        debug("ACTION: Doing nothing. Out of mana.")
+        return MacroTypes.STOP_CASTING, 0
+    end
 
     -- 2. Cast Beacon of Light if not already on focus
     if not UnitAura("focus", "Beacon of Light", nil , "PLAYER") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then

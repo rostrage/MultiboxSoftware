@@ -8,29 +8,23 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use windows::{
-    core::*,
     Win32::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         Graphics::Gdi::{
             CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel,
-            ReleaseDC, SelectObject,
+            HBITMAP, HDC, HGDIOBJ, ReleaseDC, SelectObject,
         },
-        Storage::Xps::{PrintWindow, PW_CLIENTONLY},
+        Storage::Xps::{PW_CLIENTONLY, PrintWindow},
         System::LibraryLoader::GetModuleHandleW,
         UI::{
             Input::KeyboardAndMouse::{
-                VIRTUAL_KEY, VK_F1, VK_F10, VK_F11, VK_F12, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6,
-                VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0,
+                VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12, VK_F13, VK_F14, VK_F15, VK_F16, VK_F17, VK_F18, VK_F19, VK_F20, VK_F21, VK_F22, VK_F23, VK_F24, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0
             },
             WindowsAndMessaging::{
-                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow,
-                GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow,
-                PostMessageW, SetWindowPos, SetWindowTextW, SetWindowsHookExW, TranslateMessage,
-                UnhookWindowsHookEx, HWND_TOP, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG, SWP_NOZORDER,
-                WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP,
+                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow, GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, HWND_TOP, IsWindow, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG, PostMessageW, SWP_NOZORDER, SetWindowPos, SetWindowTextW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP
             },
         },
-    },
+    }, core::*
 };
 
 // Configuration structs for window positions and sizes
@@ -150,8 +144,6 @@ fn set_window_position(hwnd: HWND, config: &WindowConfig) {
             config.y,
             1280, //currently hardcoded to always match in game resolution of 1280x720
             720,
-            // config.width,
-            // config.height,
             SWP_NOZORDER,
         );
     }
@@ -251,7 +243,6 @@ unsafe extern "system" fn keyboard_hook_proc(
 
         // Only handle keydown and keyup events
         if event_type != WM_KEYDOWN && event_type != WM_KEYUP {
-            // println!("Ignoring non-key event: {}", event_type);
             return CallNextHookEx(None, n_code, w_param, l_param);
         }
 
@@ -267,9 +258,8 @@ unsafe extern "system" fn keyboard_hook_proc(
                             vk_code, event_type, window.0
                         );
                         let mut l_param = 1;
-                        if (event_type == WM_KEYUP) {
+                        if event_type == WM_KEYUP {
                             // Key up lParam needs to have the 0xC0000000 flag set
-                            // see https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-keyup
                             l_param = l_param | 0xC0000000;
                         }
                         let _ = PostMessageW(
@@ -288,9 +278,6 @@ unsafe extern "system" fn keyboard_hook_proc(
 }
 
 fn main() {
-    // iced::run("A cool counter", Counter::update, Counter::view);
-
-    // Load configuration from JSON file
     load_config();
 
     // Initialize scancode mapping
@@ -307,11 +294,23 @@ fn main() {
     scancode_map.insert(0x0A, VK_F10);
     scancode_map.insert(0x0B, VK_F11);
     scancode_map.insert(0x0C, VK_F12);
+    scancode_map.insert(0x0D, VK_F13);
+    scancode_map.insert(0x0E, VK_F14);
+    scancode_map.insert(0x0F, VK_F15);
+    scancode_map.insert(0x10, VK_F16);
+    scancode_map.insert(0x11, VK_F17);
+    scancode_map.insert(0x12, VK_F18);
+    scancode_map.insert(0x13, VK_F18);
+    scancode_map.insert(0x14, VK_F19);
+    scancode_map.insert(0x15, VK_F20);
+    scancode_map.insert(0x16, VK_F21);
+    scancode_map.insert(0x17, VK_F22);
+    scancode_map.insert(0x18, VK_F23);
+    scancode_map.insert(0x19, VK_F24);
+
 
     let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
     let window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>> = Arc::new(Mutex::new(HashMap::new()));
-
-    // Track currently active HWNDs using our wrapper type
 
     // Start the watcher thread
     std::thread::spawn(move || {
@@ -380,66 +379,79 @@ fn get_window_title_and_omb_number(hwnd: HWND) -> (String, Option<usize>) {
     }
 }
 
-fn capture_pixel_colors(hwnd: HWND) -> Option<(u32, u32)> {
-    unsafe {
-        // Get the window's device context
-        let hdc_window = GetDC(Some(hwnd));
-        if hdc_window.is_invalid() {
-            return None;
+// Struct to manage GDI resources safely and efficiently
+struct WindowCapturer {
+    hwnd: HWND,
+    hdc_window: HDC,
+    hdc_mem: HDC,
+    hbm: HBITMAP,
+    old_hbm: HGDIOBJ,
+}
+
+impl WindowCapturer {
+    // Initialize GDI objects ONCE per window
+    fn new(hwnd: HWND) -> Option<Self> {
+        unsafe {
+            let hdc_window = GetDC(Some(hwnd));
+            if hdc_window.is_invalid() {
+                return None;
+            }
+
+            let hdc_mem = CreateCompatibleDC(Some(hdc_window));
+            if hdc_mem.is_invalid() {
+                ReleaseDC(Some(hwnd), hdc_window);
+                return None;
+            }
+
+            // Optimization: Create a tiny bitmap (2x1) just enough for our pixels.
+            // This prevents allocating ~4MB per frame, fixing the memory leak.
+            let hbm = CreateCompatibleBitmap(hdc_window, 2, 1);
+            if hbm.is_invalid() {
+                DeleteDC(hdc_mem);
+                ReleaseDC(Some(hwnd), hdc_window);
+                return None;
+            }
+
+            let old_hbm = SelectObject(hdc_mem, hbm.into());
+
+            Some(Self {
+                hwnd,
+                hdc_window,
+                hdc_mem,
+                hbm,
+                old_hbm,
+            })
         }
+    }
 
-        // Create a compatible DC for the memory bitmap
-        let hdc_mem_dc = CreateCompatibleDC(Some(hdc_window));
-        if hdc_mem_dc.is_invalid() {
-            ReleaseDC(Some(hwnd), hdc_window);
-            return None;
+    // Reuse the existing GDI objects to capture pixels
+    fn capture(&self) -> Option<(u32, u32)> {
+        unsafe {
+            // Use PrintWindow with PW_CLIENTONLY. This works for minimized/occluded windows.
+            // It renders into our tiny 2x1 bitmap (clipped automatically).
+            if PrintWindow(self.hwnd, self.hdc_mem, PW_CLIENTONLY).as_bool() {
+                let sentinel = GetPixel(self.hdc_mem, SENTINEL_X, PIXEL_Y).0;
+                let command = GetPixel(self.hdc_mem, PIXEL_X, PIXEL_Y).0;
+                Some((sentinel, command))
+            } else {
+                None
+            }
         }
-
-        // Get client rect to determine size
-        let mut client_rect = RECT::default();
-        if GetClientRect(hwnd, &mut client_rect).is_err() {
-            let _ = DeleteDC(hdc_mem_dc);
-            ReleaseDC(Some(hwnd), hdc_window);
-            return None;
-        }
-
-        let width = client_rect.right - client_rect.left;
-        let height = client_rect.bottom - client_rect.top;
-
-        // Create a bitmap compatible with the window DC
-        // We only need a small area but let's capture a bit more to be safe
-        let capture_width = 10.max(width);
-        let capture_height = 10.max(height);
-
-        let hbm_screen_cap = CreateCompatibleBitmap(hdc_window, capture_width, capture_height);
-        if hbm_screen_cap.is_invalid() {
-            let _ = DeleteDC(hdc_mem_dc);
-            ReleaseDC(Some(hwnd), hdc_window);
-            return None;
-        }
-
-        let old_bitmap = SelectObject(hdc_mem_dc, hbm_screen_cap.into());
-
-        // Use PrintWindow to capture the window contents directly from the window's
-        // rendering buffer, bypassing DWM composition and scaling
-        // This captures at the game's native resolution
-        if !PrintWindow(hwnd, hdc_mem_dc, PW_CLIENTONLY).as_bool() {
-            println!("PrintWindow failed");
-        }
-
-        // Now read the pixels at the game's native coordinates
-        let sentinel = GetPixel(hdc_mem_dc, SENTINEL_X, PIXEL_Y).0;
-        let command = GetPixel(hdc_mem_dc, PIXEL_X, PIXEL_Y).0;
-
-        // Cleanup
-        SelectObject(hdc_mem_dc, old_bitmap);
-        let _ = DeleteObject(hbm_screen_cap.into());
-        let _ = DeleteDC(hdc_mem_dc);
-        ReleaseDC(Some(hwnd), hdc_window);
-
-        Some((sentinel, command))
     }
 }
+
+// Clean up GDI objects automatically when the struct goes out of scope
+impl Drop for WindowCapturer {
+    fn drop(&mut self) {
+        unsafe {
+            SelectObject(self.hdc_mem, self.old_hbm);
+            DeleteObject(self.hbm.into());
+            DeleteDC(self.hdc_mem);
+            ReleaseDC(Some(self.hwnd), self.hdc_window);
+        }
+    }
+}
+
 fn handle_key_toggle_command(blue: u8, keys_enabled: &mut bool, title_string: &str) {
     if blue == 1 && *keys_enabled {
         *keys_enabled = false;
@@ -564,48 +576,55 @@ fn process_window(
         window_map.lock().unwrap().insert(num, wrapped);
     }
 
-    loop {
-        unsafe {
-            if !IsWindow(Some(hwnd)).as_bool() {
-                break;
-            }
-        }
+    // Initialize the GDI capturer once.
+    // This moves the heavy allocation out of the loop.
+    let mut capturer = WindowCapturer::new(hwnd);
 
-        if let Some((sentinel, actual_color)) = capture_pixel_colors(hwnd) {
-            // Check sentinel color to ensure addon is active
-            if sentinel == SENTINEL_COLOR {
-                let blue = ((actual_color >> 16) & 0xFF) as u8;
-                let green = ((actual_color >> 8) & 0xFF) as u8;
-                let red = (actual_color & 0xFF) as u8;
-
-                handle_key_toggle_command(blue, &mut keys_enabled, &title_string);
-
-                // 0 = do nothing, 1/2 = keys, 3/4 = broadcast, >4 = swap
-                if blue > 4 {
-                    handle_window_swap(
-                        &title_string,
-                        own_omb_num,
-                        wrapped,
-                        blue,
-                        &mut last_swap_time,
-                        &window_map,
-                    );
+    if capturer.is_none() {
+        println!("[{}] Failed to initialize GDI capturer.", title_string);
+    } else {
+        let capturer = capturer.as_ref().unwrap();
+        
+        loop {
+            unsafe {
+                if !IsWindow(Some(hwnd)).as_bool() {
+                    break;
                 }
-
-                if keys_enabled {
-                    handle_key_press(hwnd, red, green, &scancode_map_arc);
-                }
-            } else {
-                // println!(
-                //     "[{}] Sentinel color mismatch. Expected {:06x}, got {:06x}. Exiting thread.",
-                //     title_string, SENTINEL_COLOR, sentinel
-                // );
             }
+    
+            // Reuse the existing GDI context
+            if let Some((sentinel, actual_color)) = capturer.capture() {
+                // Check sentinel color to ensure addon is active
+                if sentinel == SENTINEL_COLOR {
+                    let blue = ((actual_color >> 16) & 0xFF) as u8;
+                    let green = ((actual_color >> 8) & 0xFF) as u8;
+                    let red = (actual_color & 0xFF) as u8;
+    
+                    handle_key_toggle_command(blue, &mut keys_enabled, &title_string);
+    
+                    // 0 = do nothing, 1/2 = keys, 3/4 = broadcast, >4 = swap
+                    if blue > 4 {
+                        handle_window_swap(
+                            &title_string,
+                            own_omb_num,
+                            wrapped,
+                            blue,
+                            &mut last_swap_time,
+                            &window_map,
+                        );
+                    }
+    
+                    if keys_enabled {
+                        handle_key_press(hwnd, red, green, &scancode_map_arc);
+                    }
+                }
+            }
+    
+            // Sleep between checks
+            sleep(Duration::from_millis(15));
         }
-
-        // Sleep between checks
-        sleep(Duration::from_millis(15));
     }
+    // GDI resources in 'capturer' are automatically cleaned up here via Drop
 
     if let Some(num) = own_omb_num {
         window_map.lock().unwrap().remove(&num);
@@ -614,16 +633,12 @@ fn process_window(
 }
 
 fn send_target_combination(hwnd: HWND, input: u8) {
-    // 0 = untargeted
     if input == 0 {
         return;
     }
-    // Calculate target index and modifier based on Lua logic
     let mod_index = (input - 1) % 4;
     let numpad_index = (input - 1) / 4;
-    // println!("Targeting {:x} {:x} {:x}", input, mod_index, numpad_index);
 
-    // Determine the modifier virtual key
     let modifier_vk: Option<VIRTUAL_KEY> = match mod_index {
         1 => Some(VK_LCONTROL),
         2 => Some(VK_LSHIFT),
@@ -631,10 +646,8 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         _ => None,
     };
   
-    // Calculate numpad key (0-9)
     let numpad_key: usize = <u16 as Into<usize>>::into(VK_NUMPAD0.0) + (numpad_index as usize);
     unsafe {
-        // Send keydown for modifier (if present)
         if let Some(modifier) = modifier_vk {
             let _ = PostMessageW(
                 Some(hwnd),
@@ -644,16 +657,10 @@ fn send_target_combination(hwnd: HWND, input: u8) {
             );
         }
 
-        // Send keydown for numpad
         let _ = PostMessageW(Some(hwnd), WM_KEYDOWN as u32, WPARAM(numpad_key), LPARAM(0));
-
-        // Wait a bit to ensure the key is registered
         std::thread::sleep(std::time::Duration::from_millis(10));
-
-        // Send keyup for numpad
         let _ = PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(numpad_key), LPARAM(0));
 
-        // Send keyup for modifier (if present)
         if let Some(modifier) = modifier_vk {
             let _ = PostMessageW(
                 Some(hwnd),
@@ -662,8 +669,6 @@ fn send_target_combination(hwnd: HWND, input: u8) {
                 LPARAM(0),
             );
         }
-
-        // Optional: add delay after all actions
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
