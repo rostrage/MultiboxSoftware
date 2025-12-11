@@ -43,7 +43,7 @@ local MacroTypes = {
 -- Debuffs that should not be instantly dispelled
 local DISPEL_BLACKLIST = {
     ["Mark of Combustion"] = true,
-    ["Soul Consumption"] = true,
+    ["Mark of Consumption"] = true,
     ["Mutated Infection"] = true,
     ["Necrotic Plague"] = true,
 }
