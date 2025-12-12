@@ -27,6 +27,15 @@ local function ensureAuraFrame()
     _G.RestoShamanAuraFrame = f
 end
 
+local function getSpellCooldownRemaining(spellName)
+    local startTime, duration, _ = GetSpellCooldown(spellName)
+    if startTime and startTime > 0 then
+        local remaining = (startTime + duration) - GetTime()
+        return remaining > 0 and remaining or 0
+    end
+    return 0
+end
+
 local MacroTypes = {
     DOING_NOTHING = 0,
     WATER_SHIELD = 1,
