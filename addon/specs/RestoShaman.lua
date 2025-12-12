@@ -169,7 +169,7 @@ local function getNextBossSwingTimer()
         end
     end
 
-    if nextSwingTime == math.huge then
+    if nextSwingTime == math.huge or nextSwingTime > GetTime() then
         return nil -- No boss swing timer found
     end
 
@@ -326,7 +326,6 @@ local function getRestoShamanMacro()
         local _, _, _, _, _, endtimeMS = UnitCastingInfo("player")
         local castFinishTime = endtimeMS and (endtimeMS / 1000) or nil
         local nextBossSwing = getNextBossSwingTimer()
-        debug("Cast finish time: " .. tostring(castFinishTime) .. ", Next boss swing: " .. tostring(nextBossSwing))
         if nextBossSwing ~= nil then
             -- If we are casting and a boss swing is coming soon
             if castFinishTime ~= nil and castFinishTime < nextBossSwing then
