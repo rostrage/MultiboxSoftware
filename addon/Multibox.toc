@@ -12,6 +12,12 @@ Libs\AceDB-3.0\AceDB-3.0.xml
 Libs\AceConsole-3.0\AceConsole-3.0.xml
 Libs\AceComm-3.0\AceComm-3.0.xml
 
+Maps.lua
+Follow.lua
+Guildbank.lua
+LFG.lua
+Party.lua
+Quest.lua
 specs\BalanceDruid.lua
 specs\DemonologyWarlock.lua
 specs\FeralBearDruid.lua
@@ -21,10 +27,5 @@ specs\RestoShaman.lua
 specs\RetriPaladin.lua
 specs\HolyPaladin.lua
 specs\ShadowPriest.lua
-Follow.lua
-Guildbank.lua
-LFG.lua
-Party.lua
-Quest.lua
 Config.lua
 Multibox.lua

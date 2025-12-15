@@ -8,23 +8,31 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use windows::{
+    core::*,
     Win32::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         Graphics::Gdi::{
             CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetPixel,
-            HBITMAP, HDC, HGDIOBJ, ReleaseDC, SelectObject,
+            ReleaseDC, SelectObject, HBITMAP, HDC, HGDIOBJ,
         },
-        Storage::Xps::{PW_CLIENTONLY, PrintWindow},
+        Storage::Xps::{PrintWindow, PW_CLIENTONLY},
         System::LibraryLoader::GetModuleHandleW,
         UI::{
             Input::KeyboardAndMouse::{
-                VIRTUAL_KEY, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12, VK_F13, VK_F14, VK_F15, VK_F16, VK_F17, VK_F18, VK_F19, VK_F20, VK_F21, VK_F22, VK_F23, VK_F24, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_NUMPAD0
+                VIRTUAL_KEY, VK_A, VK_D, VK_DOWN, VK_F1, VK_F10, VK_F11, VK_F12, VK_F13, VK_F14,
+                VK_F15, VK_F16, VK_F17, VK_F18, VK_F19, VK_F2, VK_F20, VK_F21, VK_F22, VK_F23,
+                VK_F24, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_LCONTROL, VK_LEFT,
+                VK_LMENU, VK_LSHIFT, VK_NUMPAD0, VK_RIGHT, VK_UP,
             },
             WindowsAndMessaging::{
-                CallNextHookEx, DispatchMessageW, EnumWindows, GetClientRect, GetForegroundWindow, GetMessageW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, HWND_TOP, IsWindow, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG, PostMessageW, SWP_NOZORDER, SetWindowPos, SetWindowTextW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP
+                CallNextHookEx, DispatchMessageW, EnumWindows, GetForegroundWindow, GetMessageW,
+                GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsWindow, PostMessageW,
+                SetWindowPos, SetWindowTextW, SetWindowsHookExW, TranslateMessage,
+                UnhookWindowsHookEx, HWND_TOP, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG, SWP_NOZORDER,
+                WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP,
             },
         },
-    }, core::*
+    },
 };
 
 // Configuration structs for window positions and sizes
@@ -57,8 +65,9 @@ unsafe impl Send for HwndWrapper {}
 const PIXEL_X: i32 = 0;
 const PIXEL_Y: i32 = 0;
 const SENTINEL_X: i32 = 1;
-// In-game addon sets sentinel pixels to check if the addon is active.
-// Lua (r=0x12, g=0x34, b=0x56) -> BGR 0x563412
+const MOVEMENT_ROTATION_PIXEL_X: i32 = 2; // New pixel for movement/rotation
+                                          // In-game addon sets sentinel pixels to check if the addon is active.
+                                          // Lua (r=0x12, g=0x34, b=0x56) -> BGR 0x563412
 const SENTINEL_COLOR: u32 = 0x563412;
 
 // Global configuration storage
@@ -308,7 +317,6 @@ fn main() {
     scancode_map.insert(0x18, VK_F23);
     scancode_map.insert(0x19, VK_F24);
 
-
     let scancode_map_arc = Arc::new(Mutex::new(scancode_map));
     let window_map: Arc<Mutex<HashMap<usize, HwndWrapper>>> = Arc::new(Mutex::new(HashMap::new()));
 
@@ -329,7 +337,7 @@ fn main() {
                     // Spawn a new thread to handle this HWND
                     let scancode_arc_clone = Arc::clone(&scancode_map_arc);
                     let window_map_clone = Arc::clone(&window_map);
-                    
+
                     std::thread::spawn(move || {
                         process_window(wrapped, scancode_arc_clone, window_map_clone)
                     });
@@ -403,9 +411,9 @@ impl WindowCapturer {
                 return None;
             }
 
-            // Optimization: Create a tiny bitmap (2x1) just enough for our pixels.
+            // Optimization: Create a tiny bitmap (3x1) just enough for our pixels.
             // This prevents allocating ~4MB per frame, fixing the memory leak.
-            let hbm = CreateCompatibleBitmap(hdc_window, 2, 1);
+            let hbm = CreateCompatibleBitmap(hdc_window, 3, 1);
             if hbm.is_invalid() {
                 DeleteDC(hdc_mem);
                 ReleaseDC(Some(hwnd), hdc_window);
@@ -425,14 +433,16 @@ impl WindowCapturer {
     }
 
     // Reuse the existing GDI objects to capture pixels
-    fn capture(&self) -> Option<(u32, u32)> {
+    fn capture(&self) -> Option<(u32, u32, u32)> {
         unsafe {
             // Use PrintWindow with PW_CLIENTONLY. This works for minimized/occluded windows.
-            // It renders into our tiny 2x1 bitmap (clipped automatically).
+            // It renders into our tiny 3x1 bitmap (clipped automatically).
             if PrintWindow(self.hwnd, self.hdc_mem, PW_CLIENTONLY).as_bool() {
                 let sentinel = GetPixel(self.hdc_mem, SENTINEL_X, PIXEL_Y).0;
                 let command = GetPixel(self.hdc_mem, PIXEL_X, PIXEL_Y).0;
-                Some((sentinel, command))
+                let movement_rotation =
+                    GetPixel(self.hdc_mem, MOVEMENT_ROTATION_PIXEL_X, PIXEL_Y).0;
+                Some((sentinel, command, movement_rotation))
             } else {
                 None
             }
@@ -558,9 +568,104 @@ fn handle_key_press(
         send_target_combination(hwnd, green);
         send_keypress(hwnd, scancode);
         sleep(Duration::from_millis(100));
-        return true
+        return true;
     }
     false
+}
+
+fn handle_movement_rotation_command(hwnd: HWND, bitmask: u8, last_bitmask: u8) {
+    unsafe {
+        // Bit 0: Rotate Right
+        if (bitmask & 1) != last_bitmask & 1 {
+            if(bitmask & 1) == 0 {
+                //finished rotating left
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_RIGHT.0.into()), LPARAM(0));
+            } else {
+                //start rotating left
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_RIGHT.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+        // Bit 1: Rotate Left
+        if (bitmask & 2) != last_bitmask & 2 {
+            if(bitmask & 2) == 0 {
+                //finished rotating left
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_LEFT.0.into()), LPARAM(0));
+            } else {
+                //start rotating left
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_LEFT.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+        // Bit 2: Move Forward
+        if (bitmask & 4) != last_bitmask & 4 {
+            if(bitmask & 4) == 0 {
+                //finished moving forward
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_UP.0.into()), LPARAM(0));
+            } else {
+                //start moving forward
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_UP.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+        // Bit 3: Move Backward
+        if (bitmask & 8) != last_bitmask & 8 {
+            if(bitmask & 8) == 0 {
+                //finished moving backward
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_DOWN.0.into()), LPARAM(0));
+            } else {
+                //start moving backward
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_DOWN.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+        // Bit 4: Move Right (strafe)
+        if (bitmask & 16) != last_bitmask & 16 {
+            if(bitmask & 16) == 0 {
+                //finished moving right
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_D.0.into()), LPARAM(0));
+            } else {
+                //start moving right
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_D.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+        // Bit 5: Move Left (strafe)
+        if (bitmask & 32) != last_bitmask & 32 {
+            if(bitmask & 32) == 0 {
+                //finished moving left
+                PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(VK_A.0.into()), LPARAM(0));
+            } else {
+                //start moving left
+                let _ = PostMessageW(
+                    Some(hwnd),
+                    WM_KEYDOWN as u32,
+                    WPARAM(VK_A.0.into()),
+                    LPARAM(0),
+                );
+            }
+        }
+    }
 }
 
 // Process a single HWND
@@ -588,24 +693,26 @@ fn process_window(
     } else {
         let capturer = capturer.as_ref().unwrap();
         let mut loops_since_last_keypress = 0;
+        let mut last_movement_bitmask = 0;
         loop {
             unsafe {
                 if !IsWindow(Some(hwnd)).as_bool() {
                     break;
                 }
             }
-    
+
             // Reuse the existing GDI context
-            if let Some((sentinel, actual_color)) = capturer.capture() {
+            if let Some((sentinel, actual_color, movement_rotation_color)) = capturer.capture() {
                 // Check sentinel color to ensure addon is active
                 if sentinel == SENTINEL_COLOR {
                     let blue = ((actual_color >> 16) & 0xFF) as u8;
                     let green = ((actual_color >> 8) & 0xFF) as u8;
                     let red = (actual_color & 0xFF) as u8;
-    
+                    let movement_rotation_bitmask = (movement_rotation_color & 0xFF) as u8; // Red component only
+
                     handle_key_toggle_command(blue, &mut keys_enabled, &title_string);
-    
-                    // 0 = do nothing, 1/2 = keys, 3/4 = broadcast, >4 = swap
+
+                    // 0 = do nothing, 1/2 = unused, 3/4 = broadcast, >4 = swap
                     if blue > 4 {
                         handle_window_swap(
                             &title_string,
@@ -616,7 +723,18 @@ fn process_window(
                             &window_map,
                         );
                     }
-    
+
+                    if movement_rotation_bitmask != last_movement_bitmask {
+                        handle_movement_rotation_command(
+                            hwnd,
+                            movement_rotation_bitmask,
+                            last_movement_bitmask,
+                        );
+                        last_movement_bitmask = movement_rotation_bitmask;
+                        // Consider adding a small sleep here if movement commands are sent too rapidly
+                        // sleep(Duration::from_millis(10));
+                    }
+
                     if keys_enabled && loops_since_last_keypress >= 5 {
                         let has_pressed_key = handle_key_press(hwnd, red, green, &scancode_map_arc);
                         if has_pressed_key {
@@ -628,7 +746,7 @@ fn process_window(
             }
             loops_since_last_keypress += 1;
             // Sleep between checks
-            sleep(Duration::from_millis(15));
+            sleep(Duration::from_millis(3));
         }
     }
     // GDI resources in 'capturer' are automatically cleaned up here via Drop
@@ -652,7 +770,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         3 => Some(VK_LMENU),
         _ => None,
     };
-  
+
     let numpad_key: usize = <u16 as Into<usize>>::into(VK_NUMPAD0.0) + (numpad_index as usize);
     unsafe {
         if let Some(modifier) = modifier_vk {
