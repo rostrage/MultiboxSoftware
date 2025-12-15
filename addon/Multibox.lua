@@ -2,9 +2,6 @@ local Multibox = LibStub("AceAddon-3.0"):NewAddon("Multibox", "AceComm-3.0")
 
 local MESSAGE_PREFIX = "MBX"
 
--- Configurable fudge factors (adjust these as needed)
-local ROTATION_FUDGE_FACTOR = 0.1 -- Radians
-local MOVEMENT_FUDGE_FACTOR = 1.0 -- Yards (assuming GetPlayerMapPosition returns yards)
 
 -- Frame for drawing
 local frame = CreateFrame("Frame", nil, UIParent)
@@ -31,7 +28,6 @@ movementRotationTexture:SetSize(1, 1)
 movementRotationTexture:SetTexture("Interface\\AddOns\\Multibox\\Smooth.tga")
 
 local getNextMacro
-local movementRotationBitmask = 0 -- Initialize the new bitmask
 local targetRotation = nil
 local targetX = nil
 local targetY = nil
@@ -55,74 +51,6 @@ function Multibox:OnInitialize()
     self:Init()
 end
 
-local function updateMovementRotationBitmask()
-    if targetRotation and targetX and targetY then
-        local currentFacing = GetPlayerFacing()
-        local currentX, currentY = GetPlayerMapPosition("player")
-
-        local bitmask = 0
-
-        -- ROTATION
-        local rotationDifference = targetRotation - currentFacing
-        -- Normalize difference to -PI to PI
-        if rotationDifference > math.pi then
-            rotationDifference = rotationDifference - 2 * math.pi
-        elseif rotationDifference < -math.pi then
-            rotationDifference = rotationDifference + 2 * math.pi
-        end
-
-        if rotationDifference < -ROTATION_FUDGE_FACTOR then
-            bitmask = bitmask + 1 -- Rotate right (bit 0)
-        elseif rotationDifference > ROTATION_FUDGE_FACTOR then
-            bitmask = bitmask + 2 -- Rotate left (bit 1)
-        end
-
-        -- MOVEMENT
-        local rawDx = targetX - currentX
-        local rawDy = targetY - currentY
-
-        -- 2. Scale to physical units (Yards) BEFORE rotation
-        -- This ensures that 1 unit of X and 1 unit of Y represent the same distance
-        local scaleX, scaleY = MultiboxMaps:GetMapSize()
-        if scaleX == nil or scaleY == nil then
-            DEFAULT_CHAT_FRAME:AddMessage("Map size unknown, cannot calculate movement offsets")
-            return
-        end 
-        local dx = rawDx * scaleX
-        local dy = rawDy * scaleY
-
-        local cosFacing = math.cos(currentFacing)
-        local sinFacing = math.sin(currentFacing)
-
-        -- 3. Calculate Relative Offsets using WoW Coordinate projection
-        -- Forward Vector (At 0 rads/North) is (0, -1) -> (-sin, -cos)
-        -- Right Vector (At 0 rads/North) is (1, 0)   -> (cos, -sin)
-        
-        -- Projection: Dot Product of Delta Vector and Direction Vector
-        local relativeX = dx * cosFacing - dy * sinFacing     -- Right (+) / Left (-)
-        local relativeY = -dx * sinFacing - dy * cosFacing    -- Forward (+) / Backward (-)
-
-        if relativeY > MOVEMENT_FUDGE_FACTOR then
-            bitmask = bitmask + 4 -- Move forward (bit 2)
-        elseif relativeY < -MOVEMENT_FUDGE_FACTOR then
-            bitmask = bitmask + 8 -- Move backward (bit 3)
-        end
-
-        if relativeX > MOVEMENT_FUDGE_FACTOR then
-            bitmask = bitmask + 16 -- Move right (bit 4)
-        elseif relativeX < -MOVEMENT_FUDGE_FACTOR then
-            bitmask = bitmask + 32 -- Move left (bit 5)
-        end
-
-        if (bitmask == 0) then
-            -- Reached target, clear targets
-            targetRotation = nil
-            targetX = nil
-            targetY = nil
-        end
-        movementRotationBitmask = bitmask
-    end
-end
 -- OnUpdate loop to draw the key value as a pixel color
 local timeElapsed = 0
 frame:HookScript("OnUpdate", function(self, elapsed)
@@ -147,7 +75,7 @@ frame:HookScript("OnUpdate", function(self, elapsed)
             end
         end
     end
-    updateMovementRotationBitmask()
+    local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
     drawMovementRotationPixel(movementRotationBitmask) -- Draw the movement/rotation bitmask
 end)
 
@@ -195,7 +123,7 @@ function Multibox:Init()
     MultiboxFollow:Initialize()
     MultiboxParty:Initialize()
     MultiboxQuest:Initialize()
-    MultiboxMaps:Initialize()
+    MultiboxMovement:Initialize()
     -- Initialize configuration system
     MultiboxConfig:RegisterOptions()
     

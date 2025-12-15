@@ -735,7 +735,7 @@ fn process_window(
                         // sleep(Duration::from_millis(10));
                     }
 
-                    if keys_enabled && loops_since_last_keypress >= 5 {
+                    if keys_enabled && loops_since_last_keypress >= 30 {
                         let has_pressed_key = handle_key_press(hwnd, red, green, &scancode_map_arc);
                         if has_pressed_key {
                             // Reset loop counter on keypress
