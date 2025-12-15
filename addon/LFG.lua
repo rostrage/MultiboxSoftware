@@ -4,7 +4,8 @@ MultiboxLFG = {}
 
 function MultiboxLFG.OnEvent(self, event, ...)
     if event == "LFG_PROPOSAL_SHOW" then
-		LFDDungeonReadyDialogEnterDungeonButton:Click();
+    -- This doesn't work - it has to be bound to an actual key apparently
+		-- LFDDungeonReadyDialogEnterDungeonButton:Click();
 	elseif event == "LFG_ROLE_CHECK_SHOW" then
 		LFDRoleCheckPopupAcceptButton:Click();
     end
