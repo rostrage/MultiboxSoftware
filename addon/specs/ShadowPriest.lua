@@ -30,7 +30,7 @@ local macroMap = {
 local lastVampiricTouchAppliedAt = 0
 
 -- ========= DEBUG FLAG =========
-local isDebug = true
+local isDebug = false
 local function debug(msg)
     if isDebug then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[ShadowPriest]|r " .. msg)
