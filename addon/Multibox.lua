@@ -85,7 +85,7 @@ local function initTargettingKeybinds()
         if i <= 4 then
             button:SetAttribute("macrotext", "/target party" .. i .. "\r\n/target raid" .. i)
         elseif i == 5 then
-            button:SetAttribute("macrotext", "/target player")
+            button:SetAttribute("macrotext", "/target player" .. "\r\n/target raid" .. i)
         else
             button:SetAttribute("macrotext", "/target raid" .. i)
         end
@@ -107,7 +107,7 @@ function Multibox:Init()
     if playerClass == "Paladin" then
         _, _, _, _, currentRank = GetTalentInfo(3, 26)
         if currentRank == 1 then
-            DEFAULT_CHAT_FRAME:AddMessage("INIT RETRI PALADIN");
+            DEFAULT_CHAT_FRAME:AddMessage("INIT RETRI PALADIN2");
             RetriPaladin.initRetriPaladinKeybinds();
             getNextMacro = RetriPaladin.getRetriPaladinMacro;
         end
