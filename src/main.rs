@@ -541,7 +541,7 @@ fn send_keypress(hwnd: HWND, vk: VIRTUAL_KEY) {
             WPARAM(vk.0.into()),
             LPARAM(0),
         );
-        sleep(Duration::from_millis(10));
+        // sleep(Duration::from_millis(10));
         let _ = PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(vk.0.into()), LPARAM(0));
     }
 }
@@ -551,13 +551,15 @@ fn handle_key_press(
     red: u8,
     green: u8,
     scancode_map_arc: &Arc<Mutex<HashMap<u8, VIRTUAL_KEY>>>,
-) {
+) -> bool {
     let scancode_map = scancode_map_arc.lock().unwrap();
     if let Some(&scancode) = scancode_map.get(&red) {
         send_target_combination(hwnd, green);
         send_keypress(hwnd, scancode);
         sleep(Duration::from_millis(100));
+        return true
     }
+    false
 }
 
 // Process a single HWND
@@ -584,7 +586,7 @@ fn process_window(
         println!("[{}] Failed to initialize GDI capturer.", title_string);
     } else {
         let capturer = capturer.as_ref().unwrap();
-        
+        let mut loops_since_last_keypress = 0;
         loop {
             unsafe {
                 if !IsWindow(Some(hwnd)).as_bool() {
@@ -614,12 +616,16 @@ fn process_window(
                         );
                     }
     
-                    if keys_enabled {
-                        handle_key_press(hwnd, red, green, &scancode_map_arc);
+                    if keys_enabled && loops_since_last_keypress >= 5 {
+                        let has_pressed_key = handle_key_press(hwnd, red, green, &scancode_map_arc);
+                        if has_pressed_key {
+                            // Reset loop counter on keypress
+                            loops_since_last_keypress = 0;
+                        }
                     }
                 }
             }
-    
+            loops_since_last_keypress += 1;
             // Sleep between checks
             sleep(Duration::from_millis(15));
         }
@@ -658,7 +664,7 @@ fn send_target_combination(hwnd: HWND, input: u8) {
         }
 
         let _ = PostMessageW(Some(hwnd), WM_KEYDOWN as u32, WPARAM(numpad_key), LPARAM(0));
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // std::thread::sleep(std::time::Duration::from_millis(10));
         let _ = PostMessageW(Some(hwnd), WM_KEYUP as u32, WPARAM(numpad_key), LPARAM(0));
 
         if let Some(modifier) = modifier_vk {
@@ -669,6 +675,6 @@ fn send_target_combination(hwnd: HWND, input: u8) {
                 LPARAM(0),
             );
         }
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
