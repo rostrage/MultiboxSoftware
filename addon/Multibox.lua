@@ -41,6 +41,11 @@ frame:HookScript("OnUpdate", function(self, elapsed)
     timeElapsed = timeElapsed + elapsed
     if (timeElapsed > 0.1) then
         timeElapsed = 0
+        if not Multibox.keysEnabled then
+            DEFAULT_CHAT_FRAME:AddMessage("Keys disabled, not sending commands")
+            drawPixel(0, 0, 0)
+            return
+        end
         if getNextMacro then
             local key, target = getNextMacro()
             -- Normalize the key to a value between 0 and 1 using 255 as the max for 8-bit color
@@ -173,13 +178,6 @@ function Multibox:MboxCommandHandler(msg)
 
     if cmd == "toggle" then
         self.keysEnabled = not self.keysEnabled
-        if self.keysEnabled then
-            self.controlCommand = 2 -- enable
-            DEFAULT_CHAT_FRAME:AddMessage("Keys enabled")
-        else
-            self.controlCommand = 1 -- disable
-            DEFAULT_CHAT_FRAME:AddMessage("Keys disabled")
-        end
         self:SendToggle()
     elseif cmd == "broadcast" then
         self.broadcastEnabled = not self.broadcastEnabled

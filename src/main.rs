@@ -452,14 +452,15 @@ impl Drop for WindowCapturer {
     }
 }
 
-fn handle_key_toggle_command(blue: u8, keys_enabled: &mut bool, title_string: &str) {
-    if blue == 1 && *keys_enabled {
-        *keys_enabled = false;
-        println!("[{}] Keys disabled", title_string);
-    } else if blue == 2 && !*keys_enabled {
-        *keys_enabled = true;
-        println!("[{}] Keys enabled", title_string);
-    }
+fn handle_key_toggle_command(blue: u8, _keys_enabled: &mut bool, title_string: &str) {
+    // Old - left as reference to indicate these states are no longer used -- maybe use for something else in the future?
+    // if blue == 1 && *keys_enabled {
+    //     *keys_enabled = false;
+    //     println!("[{}] Keys disabled", title_string);
+    // } else if blue == 2 && !*keys_enabled {
+    //     *keys_enabled = true;
+    //     println!("[{}] Keys enabled", title_string);
+    // }
 
     let mut broadcast_enabled = BROADCAST_ENABLED.lock().unwrap();
     if blue == 3 && !*broadcast_enabled {
