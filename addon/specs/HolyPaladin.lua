@@ -33,17 +33,91 @@ end
 
 local lastHealOnTarget = {}
 
+-- Store swing timer information here
+_G.MultiboxBossSwingTimer_swings = _G.MultiboxBossSwingTimer_swings or {}
+
+-- Helper function to extract NPC ID from GUID
+local function npcid(guid)
+    return tonumber(guid:sub(-10, -7), 16)
+end
+
+-- Helper function to check if a GUID belongs to an NPC
+local function isnpc(guid)
+    local B = tonumber(guid:sub(5,5), 16)
+    local maskedB = B % 8
+    if maskedB == 3 then -- 3 is NPC
+        return true
+    end
+    return false
+end
+
+-- Simplified OnSwing function to update swing timers
+local function OnSwing(time, guid, name)
+    -- DEFAULT_CHAT_FRAME:AddMessage("OnSwing called for name: " .. name .. " at time: " .. time)
+    _G.MultiboxBossSwingTimer_swings[guid] = _G.MultiboxBossSwingTimer_swings[guid] or {}
+    local prev = _G.MultiboxBossSwingTimer_swings[guid].time
+    _G.MultiboxBossSwingTimer_swings[guid].time = time
+    -- DEFAULT_CHAT_FRAME:AddMessage("foo")
+    local speed = nil
+    if prev and (time - prev) < 5000 then -- Only consider recent swings for speed calculation
+        speed = time - prev
+    end
+
+    -- Attempt to get attack speed from UnitAttackSpeed if available and not yet set
+    local unitId = nil
+    if UnitGUID("boss1") == guid then unitId = "boss1" end
+
+    if unitId then
+        local apiSpeed = UnitAttackSpeed(unitId)
+        if apiSpeed and apiSpeed > 0 then
+            -- Prefer API speed if available
+            speed = apiSpeed
+        end
+    end
+
+    if speed then
+        _G.MultiboxBossSwingTimer_swings[guid].next = time + speed
+    end
+end
+
 local function onUnitSpellcastSent(self, event, unit, spellName, _, targetName)
     if unit == "player" and spellName == "Holy Light" and targetName then
         lastHealOnTarget[targetName] = GetTime()
     end
 end
 
+local function onCombatLogEventUnfiltered(self, event, timestamp, subevent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, ...)
+    if subevent == "SWING_DAMAGE" or subevent == "SWING_MISSED" then
+        if isnpc(sourceGUID) then
+            OnSwing(GetTime(), sourceGUID, sourceName)
+        end
+    elseif subevent == "UNIT_DIED" then
+        if _G.MultiboxBossSwingTimer_swings[destGUID] then
+            _G.MultiboxBossSwingTimer_swings[destGUID] = nil
+        end
+    end
+end
+
+local function onCombatEnd(self)
+    debug("Combat ended, clearing swing timers.")
+    _G.MultiboxBossSwingTimer_swings = {}
+end
+
 local function ensureAuraFrame()
     if _G.HolyPaladinAuraFrame then return end
     local f = CreateFrame("Frame")
     f:RegisterEvent("UNIT_SPELLCAST_SENT")
-    f:SetScript("OnEvent", onUnitSpellcastSent)
+    f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    f:RegisterEvent("PLAYER_REGEN_ENABLED")
+    f:SetScript("OnEvent", function(self, event, ...)
+        if event == "UNIT_SPELLCAST_SENT" then
+            onUnitSpellcastSent(self, event, ...)
+        elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+            onCombatLogEventUnfiltered(self, event, ...)
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            onCombatEnd(self)
+        end
+    end)
     _G.HolyPaladinAuraFrame = f
 end
 
@@ -54,6 +128,23 @@ local function getSpellCooldownRemaining(spellName)
         return remaining > 0 and remaining or 0
     end
     return 0
+end
+
+local function getNextBossSwingTimer()
+    local nextSwingTime = math.huge
+
+    local targetGUID = UnitGUID("boss1")
+    if targetGUID and isnpc(targetGUID) then
+        if _G.MultiboxBossSwingTimer_swings[targetGUID] and _G.MultiboxBossSwingTimer_swings[targetGUID].next then
+            nextSwingTime = math.min(nextSwingTime, _G.MultiboxBossSwingTimer_swings[targetGUID].next)
+        end
+    end
+
+    if nextSwingTime == math.huge or nextSwingTime > GetTime() then
+        return nil -- No boss swing timer found
+    end
+
+    return nextSwingTime
 end
 
 -- Function to return a tuple (key, target) based on current conditions
@@ -180,14 +271,27 @@ local function getHolyPaladinMacro()
             debug(string.format("ACTION: Holy Light. (Focus at %.1f%% health)", focusPercent))
             return MacroTypes.HOLY_LIGHT, targetIndex
         else
-            debug("ACTION: Doing nothing. (No targets need healing)")
-            return MacroTypes.STOP_CASTING, 0
+            local _, _, _, _, _, endtimeMS = UnitCastingInfo("player")
+            local castFinishTime = endtimeMS and (endtimeMS / 1000) or nil
+            local nextBossSwing = getNextBossSwingTimer()
+            if nextBossSwing ~= nil then
+                -- If we are casting and a boss swing is coming soon
+                if castFinishTime ~= nil and castFinishTime < nextBossSwing then
+                    debug("ACTION: Stop Casting. (Cast finishes before next boss swing)")
+                    return MacroTypes.STOP_CASTING, 0
+                elseif focusTarget ~= -1 then
+                    -- If nothing better to do, precast a holy light
+                    debug("ACTION: Precast Holy Light. (No targets need healing)")
+                    return MacroTypes.HOLY_LIGHT, 0
+                end
+            end
         end
     end
 end
 
 -- Initialize keybinds for macros in macroMap using secure buttons and SetBindingClick
 local function initHolyPaladinKeybinds()
+    _G.HolyPaladinKeybindFrame = _G.HolyPaladinKeybindFrame or CreateFrame("Frame")
     local macroKeys = {
         [MacroTypes.BEACON_OF_LIGHT] = "F1",
         [MacroTypes.SACRED_SHIELD] = "F2",
@@ -201,7 +305,14 @@ local function initHolyPaladinKeybinds()
         local buttonName = "MacroButton_" .. binding
 
         -- Create a secure macro button
-        local button = CreateFrame("Button", buttonName, nil, "SecureActionButtonTemplate")
+        local existingButton = nil;
+        for _, frame in pairs({ _G.HolyPaladinKeybindFrame:GetChildren() }) do
+            if frame:GetName() == buttonName then
+                existingButton = frame
+                break
+            end
+        end
+        local button = existingButton or CreateFrame("Button", buttonName, _G.HolyPaladinKeybindFrame, "SecureActionButtonTemplate")
         button:SetAttribute("type", "macro")
 
         local macroText = macroMap[key]
