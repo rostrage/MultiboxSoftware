@@ -71,6 +71,15 @@ local function getDebuffDuration(unit, auraName, isPlayerOnly)
     return 0
 end
 
+local function getSpellCooldownRemaining(spellName)
+    local startTime, duration, _ = GetSpellCooldown(spellName)
+    if startTime and startTime > 0 then
+        local remaining = (startTime + duration) - GetTime()
+        return remaining > 0 and remaining or 0
+    end
+    return 0
+end
+
 -- Function to return a tuple (key, target) based on current conditions
 local function getFeralCatDruidMacro()
     
@@ -86,7 +95,6 @@ local function getFeralCatDruidMacro()
         local BITE_TIME = 4.0 -- Seconds. Min duration of Rip/Roar to allow Bite.
         local TF_ENERGY_THRESHOLD = 40.0 -- Use TF below this energy.
         local FF_ENERGY_THRESHOLD = 85.0 -- Don't use FF above this energy to avoid capping.
-        local BERSERK_BITE_THRESH = 25.0 -- During Berserk, only Bite below this energy.
         local ROAR_CLIP_TIME = 3.0 -- Refresh Roar if it has less than this duration.
         local MANGLE_CLIP_TIME = 3.0 -- Refresh Mangle if it has less than this duration.
 
@@ -94,33 +102,26 @@ local function getFeralCatDruidMacro()
         local energy = UnitPower("player", 3)
         local comboPoints = GetComboPoints("player", "focustarget")
         local isBerserk = UnitBuff("player", "Berserk")
-        
+        -- this can be any instant cast spell
+        local gcd = getSpellCooldownRemaining("Moonfire")
+
         debug(string.format("State: Energy=%d, CP=%d, Berserk=%s", energy, comboPoints, tostring(isBerserk)))
 
         -- Aura Durations
         local roar_remains = getPlayerBuffDuration("player", "Savage Roar")
+        local clearcasting_active = getPlayerBuffDuration("player", "Clearcasting") > 0 
         local rip_remains = getDebuffDuration("focustarget", "Rip", true)
         local rake_remains = getDebuffDuration("focustarget", "Rake", true)
         local mangle_remains = math.max(getDebuffDuration("focustarget", "Mangle (Cat)"), getDebuffDuration("focustarget", "Mangle (Bear)"))
         local faerie_fire_remains = getDebuffDuration("focustarget", "Faerie Fire (Feral)")
 
-        local roar_active = roar_remains > 0
-        local rip_active = rip_remains > 0
-        local rake_active = rake_remains > 0
-        local mangle_active = mangle_remains > 0
-        local faerie_fire_active = faerie_fire_remains > 0
+        local roar_active = roar_remains > gcd
+        local rip_active = rip_remains > gcd
+        local rake_active = rake_remains > gcd
+        local mangle_active = mangle_remains > gcd
+        local faerie_fire_active = faerie_fire_remains > gcd
 
         debug(string.format("Auras: Roar=%.1f, Rip=%.1f, Rake=%.1f, Mangle=%.1f, FF=%.1f", roar_remains, rip_remains, rake_remains, mangle_remains, faerie_fire_remains))
-
-        -- Cooldowns
-        local function getSpellCooldownRemaining(spellName)
-            local startTime, duration, _ = GetSpellCooldown(spellName)
-            if startTime and startTime > 0 then
-                local remaining = (startTime + duration) - GetTime()
-                return remaining > 0 and remaining or 0
-            end
-            return 0
-        end
 
         local tf_cd_remains = getSpellCooldownRemaining("Tiger's Fury")
         local berserk_cd_remains = getSpellCooldownRemaining("Berserk")
@@ -132,22 +133,23 @@ local function getFeralCatDruidMacro()
         
         debug("Step 1: Manage Buffs & Cooldowns")
         -- 1. Manage Buffs & Cooldowns
-        
+    
+
         -- Berserk: Use when off cooldown and Rip is on the target.
         -- Delay if Tiger's Fury is coming off cooldown soon.
-        if berserk_cd_remains <= 0.2 and rip_active and tf_cd_remains > 3 then
+        if berserk_cd_remains <= gcd and rip_active and tf_cd_remains > 3 then
             debug("ACTION: Berserk. (CD ready, Rip active, TF CD > 3s)")
             return MacroTypes.BERSERK, 0
         end
 
         -- Tiger's Fury: Cast below threshold when off cooldown and not Berserking
-        if energy < TF_ENERGY_THRESHOLD and tf_cd_remains <= 0.2 and not isBerserk then
+        if energy < TF_ENERGY_THRESHOLD and tf_cd_remains <= 0.3 and not isBerserk then
             debug(string.format("ACTION: Tiger's Fury. (Energy %.1f < %.1f, CD ready, not Berserk)", energy, TF_ENERGY_THRESHOLD))
             return MacroTypes.TIGERS_FURY, 0
         end
 
         -- Faerie Fire: Keep debuff applied, but avoid casting if energy is high.
-        if ff_cd_remains <= 0.2 and energy < FF_ENERGY_THRESHOLD then
+        if ff_cd_remains <= gcd and energy < FF_ENERGY_THRESHOLD then
             debug(string.format("ACTION: Faerie Fire. (Not active, CD ready, Energy %.1f < %.1f)", energy, FF_ENERGY_THRESHOLD))
             return MacroTypes.FAERIE_FIRE, 0
         end
@@ -169,18 +171,7 @@ local function getFeralCatDruidMacro()
 
         -- Ferocious Bite: Use at 5 combo points if Rip and Roar are active with enough duration.
         if comboPoints == 5 and rip_remains > BITE_TIME and roar_remains > BITE_TIME then
-            debug("Evaluating Ferocious Bite...")
-            if isBerserk then
-                debug(string.format("...Berserking. Checking energy %.1f < %.1f", energy, BERSERK_BITE_THRESH))
-                -- During Berserk, only bite at low energy to maximize Shreds
-                if energy < BERSERK_BITE_THRESH then
-                    debug("ACTION: Ferocious Bite. (Berserking, low energy)")
-                    return MacroTypes.FEROCIOUS_BITE, 0
-                end
-            else
-                debug("ACTION: Ferocious Bite. (Not Berserking, conditions met)")
-                return MacroTypes.FEROCIOUS_BITE, 0
-            end
+            return MacroTypes.FEROCIOUS_BITE, 0
         end
 
         debug("Step 3: Maintain Debuffs & Build Combo Points (Builders)")
@@ -192,6 +183,11 @@ local function getFeralCatDruidMacro()
             return MacroTypes.MANGLE, 0
         end
 
+        if clearcasting_active then
+            debug("ACTION: Shred. (Clearcasting active)")
+            return MacroTypes.SHRED, 0
+        end
+        
         -- Rake: Keep debuff applied
         if not rake_active then
             debug("ACTION: Rake. (Not active)")
@@ -208,8 +204,10 @@ local function getFeralCatDruidMacro()
         -- Shred: Use as primary combo point builder.
         -- If we've reached this point, it means no high-priority actions are needed,
         -- so we can spend our "excess" energy on Shred.
-        debug("ACTION: Shred. (Filler)")
-        return MacroTypes.SHRED, 0
+        if energy > 70 or not rip_active or not roar_active or isBerserk or tf_cd_remains <= 0.3 or (comboPoints < 5 and roar_remains < BITE_TIME) or (comboPoints < 5 and rip_remains < BITE_TIME) then
+            debug("ACTION: Shred. (Filler)")
+            return MacroTypes.SHRED, 0
+        end
     end
 
     debug("Target not valid. Doing nothing.")
