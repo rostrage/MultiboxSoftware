@@ -169,7 +169,7 @@ local function getNextBossSwingTimer()
         end
     end
 
-    if nextSwingTime == math.huge or nextSwingTime > GetTime() then
+    if nextSwingTime == math.huge or nextSwingTime < GetTime() then
         return nil -- No boss swing timer found
     end
 
