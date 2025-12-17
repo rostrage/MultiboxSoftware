@@ -12,9 +12,15 @@ local MacroTypes = {
 -- Map of macro strings for each key (0 to n)
 local macroMap = {
     [MacroTypes.DOING_NOTHING] = "/stopcasting",
-    [MacroTypes.BEACON_OF_LIGHT] = "/cast [target=focus] Beacon of Light",
-    [MacroTypes.SACRED_SHIELD] = "/cast [target=focus] Sacred Shield",
-    [MacroTypes.DIVINE_PLEA] = "/cast Divine Plea",
+    [MacroTypes.BEACON_OF_LIGHT] = [[/cast [target=focus] Beacon of Light;
+/assist focus;
+/startattack]],
+    [MacroTypes.SACRED_SHIELD] = [[/cast [target=focus] Sacred Shield;
+/assist focus;
+/startattack]],
+    [MacroTypes.DIVINE_PLEA] = [[/cast Divine Plea;
+/assist focus;
+/startattack]],
     [MacroTypes.JUDGEMENT_OF_LIGHT] = "/cast [target=focustarget] Judgement of Light",
     [MacroTypes.HOLY_LIGHT] = "/cast Holy Light", -- Dynamic target will be handled at runtime
     [MacroTypes.STOP_CASTING] = [[/stopcasting;
@@ -147,8 +153,24 @@ local function getNextBossSwingTimer()
     return nextSwingTime
 end
 
+local function getPlayerBuffDuration(unit, auraName)
+    local name, _, _, _, _, _, expirationTime, caster = UnitBuff(unit, auraName)
+    if name and (caster == "player" or caster == nil) then
+        local duration = expirationTime - GetTime()
+        debug(string.format("getPlayerBuffDuration: Found '%s' on '%s', duration=%.1f", auraName, unit, duration))
+        return duration
+    end
+    debug(string.format("getPlayerBuffDuration: '%s' not found on '%s'", auraName, unit))
+    return 0
+end
+
 -- Function to return a tuple (key, target) based on current conditions
 local function getHolyPaladinMacro()
+    
+    if UnitIsDeadOrGhost("player") or IsMounted() then
+        -- debug("ACTION: Doing nothing. (Player is dead/ghost or mounted)")
+        return MacroTypes.DOING_NOTHING, 0
+    end
     
     local focusName = UnitName("focus")
 
@@ -164,7 +186,7 @@ local function getHolyPaladinMacro()
         debug(string.format("Condition: Divine Plea CD=%.1f, Mana=%.1f%%", divinePleaCooldown, (currentMana / maxMana) * 100))
     end
 
-    if not UnitAffectingCombat("focus")  then
+    if not UnitAffectingCombat("focus") and not UnitAffectingCombat("player") then
         return MacroTypes.DOING_NOTHING, 0
     end
 
@@ -175,30 +197,24 @@ local function getHolyPaladinMacro()
         debug("ACTION: Doing nothing. Out of mana.")
         return MacroTypes.STOP_CASTING, 0
     end
-
+    
+    local beaconDuration = getPlayerBuffDuration("focus", "Beacon of Light")
     -- 2. Cast Beacon of Light if not already on focus
-    if not UnitAura("focus", "Beacon of Light", nil , "PLAYER") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
+    if beaconDuration == 0 and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
         debug("ACTION: Beacon of Light. (Not on focus)")
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
-    debug("Condition: Beacon of Light is on focus.")
 
-    -- 3. Cast Sacred Shield if not already on focus
-    if not UnitBuff("focus", "Sacred Shield") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
-        debug("ACTION: Sacred Shield. (Not on focus)")
-        return MacroTypes.SACRED_SHIELD, 0
-    end
-    debug("Condition: Sacred Shield is on focus.")
-
-    -- 4. Cast Judgement of Light on focustarget when off cooldown
+    local judgementOfThePureDuration = getPlayerBuffDuration("player", "Judgement of the Pure")
+    -- 3. Cast Judgement of Light on focustarget when off cooldown
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
-    if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") then
-        debug("ACTION: Judgement of Light. (Available)")
+    if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") and judgementOfThePureDuration == 0 then
+        debug("ACTION: Judgement of Light. (Refreshing Judgement of the Pure)")
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
     debug(string.format("Condition: Judgement of Light CD=%.1f", judgementCooldown))
 
-    -- 5. Loop through raid members and find lowest HP non-focus target
+    -- 4. Loop through raid members and find lowest HP non-focus target
     local targetIndex = 0
     local lowestPercent = 1.0
     local raidmembers = GetNumRaidMembers()
@@ -262,6 +278,21 @@ local function getHolyPaladinMacro()
         debug(string.format("ACTION: Holy Light. (Target %d at %.1f%% health)", targetIndex, lowestPercent * 100))
         return MacroTypes.HOLY_LIGHT, targetIndex
     else
+        if not UnitBuff("focus", "Sacred Shield") and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
+            debug("ACTION: Sacred Shield. (Not on focus)")
+            return MacroTypes.SACRED_SHIELD, 0
+        end
+        
+        if beaconDuration < 10 and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
+            debug("ACTION: Beacon of Light. (Refreshing on focus)")
+            return MacroTypes.BEACON_OF_LIGHT, 0
+        end
+
+        if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") then
+            debug("ACTION: Judgement of Light. (Available)")
+            return MacroTypes.JUDGEMENT_OF_LIGHT, 0
+        end
+
         -- No raid members in need; check focus now (focus is last priority)
         local focusHealth = UnitHealth("focus")
         local focusMaxHealth = UnitHealthMax("focus")
@@ -287,6 +318,7 @@ local function getHolyPaladinMacro()
             end
         end
     end
+    return MacroTypes.DOING_NOTHING, 0
 end
 
 -- Initialize keybinds for macros in macroMap using secure buttons and SetBindingClick
