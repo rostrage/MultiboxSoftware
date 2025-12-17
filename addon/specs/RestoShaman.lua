@@ -336,6 +336,9 @@ local function getRestoShamanMacro()
                 debug("ACTION: Healing Wave on Focus. (No targets need healing)")
                 return MacroTypes.HEALING_WAVE, focusTarget
             end
+        else
+            debug("ACTION: Stop Casting. (Cast finishes before next boss swing)")
+            return MacroTypes.STOP_CASTING, 0
         end
     end
     debug("ACTION: Doing nothing. (No targets need healing)")
