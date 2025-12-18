@@ -146,7 +146,7 @@ local function getNextBossSwingTimer()
         end
     end
 
-    if nextSwingTime == math.huge or nextSwingTime > GetTime() then
+    if nextSwingTime == math.huge or nextSwingTime < GetTime() then
         return nil -- No boss swing timer found
     end
 
@@ -316,6 +316,7 @@ local function getHolyPaladinMacro()
                     return MacroTypes.HOLY_LIGHT, 0
                 end
             end
+            return MacroTypes.STOP_CASTING, 0
         end
     end
     return MacroTypes.DOING_NOTHING, 0
