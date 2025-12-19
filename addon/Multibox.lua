@@ -92,6 +92,11 @@ frame:HookScript("OnUpdate", function(self, elapsed)
     end
 
     local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
+    if movementRotationBitmask == 0 then
+        targetRotation = nil
+        targetX = nil
+        targetY = nil
+    end
     drawMovementRotationPixel(movementRotationBitmask) -- Draw the movement/rotation bitmask
 end)
 
