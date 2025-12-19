@@ -1,7 +1,7 @@
 MultiboxMovement = {}
 MultiboxMovement.MapSizes = {}
 
-local ROTATION_FUDGE_FACTOR = 0.1 -- Radians
+local ROTATION_FUDGE_FACTOR = 0.2 -- Radians
 local MOVEMENT_FUDGE_FACTOR = 1.0 -- Yards
 
 
@@ -91,6 +91,7 @@ function MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, ta
         end
         return bitmask
     end
+    return 0 -- No movement/rotation
 end
 
 

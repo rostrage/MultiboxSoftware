@@ -46,6 +46,8 @@ end
 function Multibox:OnInitialize()
     self.keysEnabled = true
     self.broadcastEnabled = false
+    self.stackingEnabled = false
+    self.stackedPlayers = {}
     self.controlCommand = 0
     self:RegisterComm(MESSAGE_PREFIX)
     self:Init()
@@ -53,8 +55,11 @@ end
 
 -- OnUpdate loop to draw the key value as a pixel color
 local timeElapsed = 0
+local stackBroadcastTimeElapsed = 0
 frame:HookScript("OnUpdate", function(self, elapsed)
     timeElapsed = timeElapsed + elapsed
+    stackBroadcastTimeElapsed = stackBroadcastTimeElapsed + elapsed
+
     if (timeElapsed > 0.1) then
         timeElapsed = 0
         if not Multibox.keysEnabled then
@@ -75,6 +80,17 @@ frame:HookScript("OnUpdate", function(self, elapsed)
             end
         end
     end
+
+    if Multibox.stackingEnabled and stackBroadcastTimeElapsed > 0.5 then
+        stackBroadcastTimeElapsed = 0
+        local unitX, unitY = GetPlayerMapPosition("player")
+        local unitRotation = GetPlayerFacing()
+        local moveMessage = "move " .. unitRotation .. " " .. unitX .. " " .. unitY
+        for i, playerName in ipairs(Multibox.stackedPlayers) do
+            Multibox:SendCommMessage(MESSAGE_PREFIX, moveMessage, "WHISPER", playerName)
+        end
+    end
+
     local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
     drawMovementRotationPixel(movementRotationBitmask) -- Draw the movement/rotation bitmask
 end)
@@ -223,11 +239,21 @@ function Multibox:MboxCommandHandler(msg)
         targetRotation = tonumber(rotation_str)
         targetX = tonumber(x_str)
         targetY = tonumber(y_str)
+    elseif cmd == "stack" then
+        if args == "clear" then
+            self.stackedPlayers = {}
+            self.stackingEnabled = false
+            DEFAULT_CHAT_FRAME:AddMessage("Stacking cleared and disabled.")
+        else
+            self.stackedPlayers = {strsplit(" ", args)}
+            self.stackingEnabled = true
+            DEFAULT_CHAT_FRAME:AddMessage("Stacking enabled for: " .. args)
+        end
     elseif cmd == "" then
         self:Init()
     else
         DEFAULT_CHAT_FRAME:AddMessage("Unknown mbox command: " .. cmd)
-        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|broadcast|swap <target>|follow <target>|move <rotation> <x> <y>]")
+        DEFAULT_CHAT_FRAME:AddMessage("Usage: /mbox [toggle|broadcast|swap <target>|follow <target>|move <rotation> <x> <y>|stack <player1> <player2> ...|stack clear]")
     end
 end
 
@@ -263,6 +289,8 @@ function Multibox:OnCommReceived(prefix, message, distribution, sender)
                 DEFAULT_CHAT_FRAME:AddMessage("Broadcast disabled by " .. sender)
             end
         end
+    elseif command == "move" then
+        self:MboxCommandHandler(message)
     end
 end
 
