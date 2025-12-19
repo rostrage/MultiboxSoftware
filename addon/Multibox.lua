@@ -39,6 +39,9 @@ end
 
 -- New function to draw the movement/rotation pixel
 local function drawMovementRotationPixel(value)
+    if valu == nil then
+        value = 0
+    end
     -- Only using the red component for simplicity, as it's a single byte bitmask
     movementRotationTexture:SetVertexColor(value / 255, 0, 0)
 end
