@@ -567,7 +567,7 @@ fn handle_key_press(
     if let Some(&scancode) = scancode_map.get(&red) {
         send_target_combination(hwnd, green);
         send_keypress(hwnd, scancode);
-        sleep(Duration::from_millis(100));
+        // sleep(Duration::from_millis(100));
         return true;
     }
     false

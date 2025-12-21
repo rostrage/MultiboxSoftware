@@ -1,7 +1,7 @@
 MultiboxMovement = {}
 MultiboxMovement.MapSizes = {}
 
-local ROTATION_FUDGE_FACTOR = 0.2 -- Radians
+local ROTATION_FUDGE_FACTOR = 0.4 -- Radians
 local MOVEMENT_FUDGE_FACTOR = 1.0 -- Yards
 
 
@@ -25,12 +25,9 @@ function MultiboxMovement:GetMapSize()
 end
 
 function MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
-    if targetRotation and targetX and targetY then
+    local bitmask = 0
+    if targetRotation then
         local currentFacing = GetPlayerFacing()
-        local currentX, currentY = GetPlayerMapPosition("player")
-
-        local bitmask = 0
-
         -- ROTATION
         local rotationDifference = targetRotation - currentFacing
         -- Normalize difference to -PI to PI
@@ -45,7 +42,14 @@ function MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, ta
         elseif rotationDifference > ROTATION_FUDGE_FACTOR then
             bitmask = bitmask + 2 -- Rotate left (bit 1)
         end
-
+        
+        if (bitmask == 0) then
+            -- Reached target, clear rotation
+            targetRotation = nil
+        end
+    end
+    if targetX and targetY then
+        local currentX, currentY = GetPlayerMapPosition("player")
         -- MOVEMENT
         local rawDx = targetX - currentX
         local rawDy = targetY - currentY
@@ -83,20 +87,16 @@ function MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, ta
             bitmask = bitmask + 32 -- Move left (bit 5)
         end
 
-        if (bitmask == 0) then
-            -- Reached target, clear targets
+        if (bitmask <= 2) then
+            -- Only has rotation bits set, clear movement
             targetRotation = nil
-            targetX = nil
-            targetY = nil
         end
-        return bitmask
     end
-    return 0 -- No movement/rotation
+    return bitmask
 end
 
 
 function MultiboxMovement:Initialize()
-	DEFAULT_CHAT_FRAME:AddMessage("MultiboxMovement initialized")
 	-- Sizes borrowred from DBM-RangeCheck
 	MultiboxMovement:RegisterMapSize("AhnQiraj", -- Ahn'Qiraj 40 (Raid-Classic)
     1, 2777.544113162, 1851.6962890599989, 2, 977.55993651999984, 651.70654296999965, 3, 577.5600585899997,

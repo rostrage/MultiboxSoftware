@@ -39,7 +39,7 @@ end
 
 -- New function to draw the movement/rotation pixel
 local function drawMovementRotationPixel(value)
-    if valu == nil then
+    if value == nil then
         value = 0
     end
     -- Only using the red component for simplicity, as it's a single byte bitmask
@@ -247,6 +247,13 @@ function Multibox:MboxCommandHandler(msg)
         targetRotation = tonumber(rotation_str)
         targetX = tonumber(x_str)
         targetY = tonumber(y_str)
+        local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
+        if movementRotationBitmask == 0 then
+            targetRotation = nil
+            targetX = nil
+            targetY = nil
+        end
+        drawMovementRotationPixel(movementRotationBitmask) -- Draw the movement/rotation bitmask
     elseif cmd == "stack" then
         if args == "clear" then
             self.stackedPlayers = {}
