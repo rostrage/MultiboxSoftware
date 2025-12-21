@@ -147,7 +147,6 @@ local function getDemonologyWarlockMacro()
             debug("ACTION: Immolation Aura. (Available and in Metamorphosis)")
             return MacroTypes.IMMOLATION_AURA, 0
         end
-        debug(string.format("Condition: Immolation Aura CD=%.1f, Metamorphosis buff: %s", immolationAuraCooldown, tostring(UnitBuff("player", "Metamorphosis"))))
 
         -- Check for Decimation buff
         if UnitBuff("player", "Decimation") then
