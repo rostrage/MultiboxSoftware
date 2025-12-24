@@ -36,7 +36,7 @@ local macroMap = {
 }
 
 -- ========= DEBUG FLAG =========
-local isDebug = true
+local isDebug = false
 local function debug(msg)
     if isDebug then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ccff[DemonologyWarlock]|r " .. msg)
@@ -102,7 +102,6 @@ local function getDemonologyWarlockMacro()
             debug(string.format("ACTION: Life Tap. (Life Tap buff missing or mana %d < 1310)", currentMana))
             return MacroTypes.LIFE_TAP, 0
         end
-        debug(string.format("Condition: Life Tap buff active and mana %d >= 1310", currentMana))
 
         -- Check for Curse of Doom on focus
         local curseDoomCooldown = getSpellCooldownRemaining("Curse of Doom")
@@ -110,28 +109,24 @@ local function getDemonologyWarlockMacro()
             debug("ACTION: Curse of Doom. (Not on target and off cooldown)")
             return MacroTypes.CURSE_OF_DOOM, 0
         end
-        debug(string.format("Condition: Curse of Doom CD=%.1f, Debuff on target: %s", curseDoomCooldown, tostring(UnitDebuff("focustarget", "Curse of Doom"))))
 
         -- Check for Immolate on focus (with debouncing)
         if not UnitDebuff("focustarget", "Immolate") and GetTime() > lastImmolateAppliedAt + 2 then
             debug("ACTION: Immolate. (Not on target and debounced)")
             return MacroTypes.IMMOLATE, 0
         end
-        debug(string.format("Condition: Immolate debuffed: %s, Last applied: %.1f ago", tostring(UnitDebuff("focustarget", "Immolate")), GetTime() - lastImmolateAppliedAt))
 
         -- Check if focus target has Shadow Mastery
         if not UnitDebuff("focustarget", "Shadow Mastery") then
             debug("ACTION: Shadow Bolt. (Shadow Mastery debuff missing)")
             return MacroTypes.SHADOW_BOLT, 0
         end
-        debug("Condition: Shadow Mastery is on target.")
 
         -- Check for Corruption on focus
         if not UnitDebuff("focustarget", "Corruption") then
             debug("ACTION: Corruption. (Not on target)")
             return MacroTypes.CORRUPTION, 0
         end
-        debug("Condition: Corruption is on target.")
         
         -- Check for Metamorphosis cooldown
         local metamorphosisCooldown = getSpellCooldownRemaining("Metamorphosis")
@@ -139,7 +134,6 @@ local function getDemonologyWarlockMacro()
             debug("ACTION: Metamorphosis. (Available)")
             return MacroTypes.METAMORPHOSIS, 0
         end
-        debug(string.format("Condition: Metamorphosis CD=%.1f", metamorphosisCooldown))
 
         -- Check for Immolation Aura cooldown
         local immolationAuraCooldown = getSpellCooldownRemaining("Immolation Aura")
