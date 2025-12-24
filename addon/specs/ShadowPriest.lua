@@ -8,6 +8,7 @@ local MacroTypes = {
     MIND_FLAY = 5,
     SHADOWFIEND = 6,
     DISPERSION = 7,
+    MIND_BLASE = 8
 }
 
 -- Map of macro strings for each key (0 to n)
@@ -24,7 +25,9 @@ local macroMap = {
     [MacroTypes.SHADOWFIEND] = [[/use 10
 /cast [target=focustarget] Shadowfiend]],
     [MacroTypes.DISPERSION] = "/cast Dispersion",
-    [MacroTypes.DOING_NOTHING] = "/stopcasting"
+    [MacroTypes.DOING_NOTHING] = "/stopcasting",
+    [MacroTypes.MIND_BLASE] = [[/use 10
+/cast [target=focustarget] Mind Blast]]
 }
 
 local lastVampiricTouchAppliedAt = 0
@@ -139,6 +142,12 @@ local function getShadowPriestMacro()
         end
         debug("Condition: Shadow Word: Pain is on target")
         
+        local mindBlastCD = getSpellCooldownRemaining("Mind Blast")
+        if mindBlastCD == 0 then
+            -- Cast Mind Blast if off cooldown
+            debug("ACTION: Mind Blast. (Cooldown ready)")
+            return MacroTypes.MIND_BLASE, 0
+        end
         -- Cast Mind Flay as lowest priority
         debug("ACTION: Mind Flay. (All debuffs present, filler)")
         return MacroTypes.MIND_FLAY, 0
@@ -157,7 +166,8 @@ local function initShadowPriestKeybinds()
         [MacroTypes.SHADOW_WORD_PAIN] = "F4",
         [MacroTypes.MIND_FLAY] = "F5",
         [MacroTypes.SHADOWFIEND] = "F6",
-        [MacroTypes.DISPERSION] = "F7"
+        [MacroTypes.DISPERSION] = "F7",
+        [MacroTypes.MIND_BLASE] = "F8"
     }
 
     for key, binding in pairs(macroKeys) do
