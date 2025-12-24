@@ -69,6 +69,10 @@ function MultiboxConfig:RegisterOptions()
         options.args.specs.args.retriPaladin = RetriPaladin.Options
     end
     
+    if FuryWarrior and FuryWarrior.Options then
+        options.args.specs.args.furyWarrior = FuryWarrior.Options
+    end
+    
     -- Register the options table
     AceConfig:RegisterOptionsTable("MultiboxConfig", options, {"/mboxconfig", "/mbox"})
     

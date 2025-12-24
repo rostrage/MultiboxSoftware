@@ -208,6 +208,13 @@ function Multibox:Init()
             DemonologyWarlock.initDemonologyWarlockKeybinds();
             getNextMacro = DemonologyWarlock.getDemonologyWarlockMacro;
         end
+    elseif playerClass == "Warrior" then
+        _, _, _, _, currentRank = GetTalentInfo(2, 27); -- Placeholder for Fury Warrior talent
+        if currentRank == 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT FURY WARRIOR");
+            FuryWarrior.initFuryWarriorKeybinds();
+            getNextMacro = FuryWarrior.getFuryWarriorMacro;
+        end
     else
         DEFAULT_CHAT_FRAME:AddMessage("CLASS NOT SUPPORTED");
     end
