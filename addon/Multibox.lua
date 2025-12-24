@@ -59,6 +59,16 @@ end
 -- OnUpdate loop to draw the key value as a pixel color
 local timeElapsed = 0
 local stackBroadcastTimeElapsed = 0
+
+local function sendStackMessage()
+    local unitX, unitY = GetPlayerMapPosition("player")
+    local unitRotation = GetPlayerFacing()
+    local moveMessage = "move " .. unitRotation .. " " .. unitX .. " " .. unitY
+    for i, playerName in ipairs(Multibox.stackedPlayers) do
+        Multibox:SendCommMessage(MESSAGE_PREFIX, moveMessage, "WHISPER", playerName)
+    end
+end
+
 frame:HookScript("OnUpdate", function(self, elapsed)
     timeElapsed = timeElapsed + elapsed
     stackBroadcastTimeElapsed = stackBroadcastTimeElapsed + elapsed
@@ -86,12 +96,7 @@ frame:HookScript("OnUpdate", function(self, elapsed)
 
     if Multibox.stackingEnabled and stackBroadcastTimeElapsed > 0.5 then
         stackBroadcastTimeElapsed = 0
-        local unitX, unitY = GetPlayerMapPosition("player")
-        local unitRotation = GetPlayerFacing()
-        local moveMessage = "move " .. unitRotation .. " " .. unitX .. " " .. unitY
-        for i, playerName in ipairs(Multibox.stackedPlayers) do
-            Multibox:SendCommMessage(MESSAGE_PREFIX, moveMessage, "WHISPER", playerName)
-        end
+        sendStackMessage()
     end
 
     local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
@@ -254,6 +259,7 @@ function Multibox:MboxCommandHandler(msg)
         targetRotation = tonumber(rotation_str)
         targetX = tonumber(x_str)
         targetY = tonumber(y_str)
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("Received move command: rotation=%.2f, x=%.4f, y=%.4f", targetRotation, targetX, targetY))
         local movementRotationBitmask = MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
         if movementRotationBitmask == 0 then
             targetRotation = nil
@@ -264,11 +270,12 @@ function Multibox:MboxCommandHandler(msg)
     elseif cmd == "stack" then
         if args == "clear" then
             self.stackedPlayers = {}
-            self.stackingEnabled = false
+            -- self.stackingEnabled = false
             DEFAULT_CHAT_FRAME:AddMessage("Stacking cleared and disabled.")
         else
             self.stackedPlayers = {strsplit(" ", args)}
-            self.stackingEnabled = true
+            sendStackMessage()
+            -- self.stackingEnabled = true
             DEFAULT_CHAT_FRAME:AddMessage("Stacking enabled for: " .. args)
         end
     elseif cmd == "" then

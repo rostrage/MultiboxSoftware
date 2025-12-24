@@ -1,8 +1,8 @@
 MultiboxMovement = {}
 MultiboxMovement.MapSizes = {}
 
-local ROTATION_FUDGE_FACTOR = 0.4 -- Radians
-local MOVEMENT_FUDGE_FACTOR = 1.0 -- Yards
+local ROTATION_FUDGE_FACTOR = 0.2 -- Radians
+local MOVEMENT_FUDGE_FACTOR = 0.5 -- Yards
 
 
 function MultiboxMovement:RegisterMapSize(zone, ...)
@@ -26,8 +26,8 @@ end
 
 function MultiboxMovement:getMovementRotationBitmask(targetRotation, targetX, targetY)
     local bitmask = 0
+    local currentFacing = GetPlayerFacing()
     if targetRotation then
-        local currentFacing = GetPlayerFacing()
         -- ROTATION
         local rotationDifference = targetRotation - currentFacing
         -- Normalize difference to -PI to PI
