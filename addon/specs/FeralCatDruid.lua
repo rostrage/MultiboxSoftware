@@ -101,7 +101,9 @@ local function getFeralCatDruidMacro()
         -- Player and Target State
         local energy = UnitPower("player", 3)
         local comboPoints = GetComboPoints("player", "focustarget")
-        local isBerserk = UnitBuff("player", "Berserk")
+        -- Don't use UnitBuff here - that will include Enchant Weapon - Berserking Buff
+        -- Berserk the spell is 3 min cd with 15 sec duration, 3 * 60 - 15 = 165
+        local isBerserk = getSpellCooldownRemaining("Berserk") > 165
         -- this can be any instant cast spell
         local gcd = getSpellCooldownRemaining("Moonfire")
 
