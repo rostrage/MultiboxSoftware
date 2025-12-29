@@ -14,20 +14,28 @@ local macroMap = {
     [MacroTypes.FAERIE_FIRE_FERAL] = [[/use !Maul
 /use 10
 /startattack
+/cancelaura Divine Intervention
+/cancelaura Hand of Protection
 /use [target=focustarget] Faerie Fire (Feral)]],
     [MacroTypes.ENRAGE] = "/use Enrage",
     [MacroTypes.MANGLE_BEAR] = [[/use !Maul
 /use 10
 /startattack
+/cancelaura Divine Intervention
+/cancelaura Hand of Protection
 /use [target=focustarget] Mangle (Bear)]],
     [MacroTypes.BERSERK] = "/use Berserk",
     [MacroTypes.LACERATE] = [[/use !Maul
 /use 10
 /startattack
+/cancelaura Divine Intervention
+/cancelaura Hand of Protection
 /use [target=focustarget] Lacerate]],
     [MacroTypes.SWIPE_BEAR] = [[/use !Maul
 /use 10
 /startattack
+/cancelaura Divine Intervention
+/cancelaura Hand of Protection
 /use [target=focustarget] Swipe (Bear)]],
     [MacroTypes.DOING_NOTHING] = "/run print(\"Doing nothing\")"
 }
