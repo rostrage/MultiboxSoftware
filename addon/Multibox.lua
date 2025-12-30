@@ -171,9 +171,16 @@ function Multibox:Init()
             getNextMacro = HolyPaladin.getHolyPaladinMacro;
         end
     elseif playerClass == "Shaman" then
-        DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
-        RestoShaman.initRestoShamanKeybinds();
-        getNextMacro = RestoShaman.getRestoShamanMacro;
+        _, _, _, _, currentRank = GetTalentInfo(1, 25);
+        if currentRank >= 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("INIT ELEMENTAL SHAMAN");
+            ElementalShaman.initElementalShamanKeybinds();
+            getNextMacro = ElementalShaman.getElementalShamanMacro;
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("INIT RESTO SHAMAN");
+            RestoShaman.initRestoShamanKeybinds();
+            getNextMacro = RestoShaman.getRestoShamanMacro;
+        end
     elseif playerClass == "Druid" then
         _, _, _, _, currentRank = GetTalentInfo(1, 28);
         if currentRank == 1 then

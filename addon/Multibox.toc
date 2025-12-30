@@ -28,5 +28,6 @@ specs\RetriPaladin.lua
 specs\HolyPaladin.lua
 specs\ShadowPriest.lua
 specs\FuryWarrior.lua
+specs\ElementalShaman.lua
 Config.lua
 Multibox.lua
