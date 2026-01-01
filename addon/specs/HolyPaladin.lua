@@ -205,7 +205,7 @@ local function getHolyPaladinMacro()
         return MacroTypes.BEACON_OF_LIGHT, 0
     end
 
-    local judgementOfThePureDuration = getPlayerBuffDuration("player", "Judgement of the Pure")
+    local judgementOfThePureDuration = getPlayerBuffDuration("player", "Judgements of the Pure")
     -- 3. Cast Judgement of Light on focustarget when off cooldown
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
     if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") and judgementOfThePureDuration == 0 then
