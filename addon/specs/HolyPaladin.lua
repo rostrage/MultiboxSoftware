@@ -177,9 +177,11 @@ local function getHolyPaladinMacro()
     -- 1. Use Divine Plea when mana is low and off cooldown
     local currentMana = UnitPower("player", 0)
     local maxMana = UnitPowerMax("player", 0)
+    local gcd = getSpellCooldownRemaining("Seal of Wisdom")
+
     if currentMana < maxMana * 0.9 then
         local divinePleaCooldown = getSpellCooldownRemaining("Divine Plea")
-        if divinePleaCooldown <= 0.2 then
+        if divinePleaCooldown <= gcd then
             debug("ACTION: Divine Plea. (Available)")
             return MacroTypes.DIVINE_PLEA, 0
         end
@@ -197,7 +199,8 @@ local function getHolyPaladinMacro()
         debug("ACTION: Doing nothing. Out of mana.")
         return MacroTypes.STOP_CASTING, 0
     end
-    
+
+
     local beaconDuration = getPlayerBuffDuration("focus", "Beacon of Light")
     -- 2. Cast Beacon of Light if not already on focus
     if beaconDuration == 0 and UnitInRange("focus") and not UnitIsDeadOrGhost("focus") and not UnitIsEnemy("player","focus") then
@@ -208,7 +211,7 @@ local function getHolyPaladinMacro()
     local judgementOfThePureDuration = getPlayerBuffDuration("player", "Judgements of the Pure")
     -- 3. Cast Judgement of Light on focustarget when off cooldown
     local judgementCooldown = getSpellCooldownRemaining("Judgement of Light")
-    if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") and judgementOfThePureDuration == 0 then
+    if judgementCooldown <= gcd and IsSpellInRange("Judgement of Light", "focustarget") and judgementOfThePureDuration == 0 then
         debug("ACTION: Judgement of Light. (Refreshing Judgement of the Pure)")
         return MacroTypes.JUDGEMENT_OF_LIGHT, 0
     end
@@ -288,7 +291,7 @@ local function getHolyPaladinMacro()
             return MacroTypes.BEACON_OF_LIGHT, 0
         end
 
-        if judgementCooldown <= 0.2 and IsSpellInRange("Judgement of Light", "focustarget") then
+        if judgementCooldown <= gcd and IsSpellInRange("Judgement of Light", "focustarget") then
             debug("ACTION: Judgement of Light. (Available)")
             return MacroTypes.JUDGEMENT_OF_LIGHT, 0
         end
